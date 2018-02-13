@@ -9,10 +9,18 @@ BV4612 ui(0x35);
 #define     POCET_PUMP      18      //Pocet pump
 #define     KEY_NOK         127     //kovertovanie tlacidiel
 #define     KEY_OK          126
+#define     KEY_CHMOD       125     //
+#define     KEY_CHDIR       124
+#define     UNUSED_CELL     -1
+
 
 //globalne premenne pre vsetky funkcie
 char m; // 0 = display1, -1 =display2,  1 = jedno cerpadlo... 
+char kbuf;  //buffer pre vytváranie viacciferneho čísla
 unsigned long savedTime, currentTime;
+uint8_t tempMode; 
+uint16_t tempTimeStart;
+uint16_t tempTimeLength;
 
 uint8_t Lnapln[4];
 uint8_t Rnapln[4];
@@ -129,17 +137,31 @@ void vypisPumpu(uint8_t p) {
 
 }
 
+
+//Výpis 1 vybranej pumpy s detailami
+void pumpDetail(uint8_t p, uint8_t mode, uint16_t tStart, uint16_t tLength ){
+  ui.clear();
+  ui.print(p);
+  ui.print("\n");
+  ui.print(mode);
+  //ui.print("\n");
+  //ui.print(pumpTimesStart[p]);
+  //ui.print("\n");
+  //ui.print(pumpTimesLength[p]);
+}
+
+
 //Funkcia na prepis zadaneho cisla z klavesnice na pouzivane v kode
 char handleKey(char c){
   switch (c) {
     case 1:  return 7; break;
     case 2:  return 8; break;
     case 3:  return 9; break;
-    case 4:   break;
+    case 4:  return KEY_CHMOD; break;   //CH= change, MOD = modu
     case 5:  return 4; break;
     case 6:  return 5; break;
     case 7:  return 6; break;
-    case 8:   break;
+    case 8:  return KEY_CHDIR; break;    //CH = change, DIR = direction - smer
     case 9:  return 1; break;
     case 10: return 2; break;
     case 11: return 3; break;
@@ -152,6 +174,7 @@ char handleKey(char c){
   return 0; 
 }
 
+//Vypis celeho HOME - vychodzi zobrazenie
 void zobrazenie() {
 
     ui.clear();
@@ -208,6 +231,7 @@ void setup()
 
     //Inicializacia premennych
     m = 0; // 0 = display, 1 = jedno cerpadlo... 
+    kbuf = UNUSED_CELL;
     savedTime = 0;  // cas ku ktoremu porovnavam, loop stale prebieha, referencny kt. sa porovna s currentTime
   
     zobrazenie();
@@ -221,13 +245,27 @@ void loop()
     if (m == 0 || m == -1) { 
 	
         //handler zmeny modu
-        char k, buf[30];      
+        char k;   
         if(ui.keysBuf()) {      //po staceni klavesy zmen mod
-            k = ui.key();
-            if (k >= 1 && k <= POCET_PUMP) {
-                m = k;
-                ui.clrBuf();
-                ui.clear();
+            k = handleKey(ui.key());
+            ui.clrBuf();
+            //podmienky na rozoznanie či pri zadavaní VIACCIFERNEHO čisla už máme niečo zadané alebo nie 
+            if(k>=0 && k<=9 && kbuf != UNUSED_CELL){      
+              kbuf = kbuf*10 + k;
+            }
+            if(k>=0 && k<=9 && kbuf == UNUSED_CELL){
+              kbuf = k;
+            }
+            if(k == KEY_OK){
+              if(kbuf <= POCET_PUMP)
+                {m = kbuf;}
+              tempMode = pumpModes[m-1]; 
+              tempTimeStart = pumpTimesStart[m-1];
+              tempTimeLength = pumpTimesLength[m-1];
+              kbuf = UNUSED_CELL;
+            }
+            if(k == KEY_NOK){
+              kbuf = UNUSED_CELL;
             }
         }
         
@@ -254,22 +292,47 @@ void loop()
     //MOD 1 VYPIS 1 CERPADLA  ------------
     if (m >= 1 && m <= POCET_PUMP) {
         currentTime = millis();
-        char k, mbuf[30];
-    
-        if (ui.keysBuf()) {     //zabezpecuje skok do modu 0 - zakladne zobrazenie, pri dalsom stlaceni klavesnice    !!!
-            m = 0;
+        char k;
+        //dočasné premenné = temporary, naše pracovné ktoré vidíme dynamicky sa meniť pri výpise 1 čerpadla. po výstupe z funkcie zanikajú a ostavaju iba globálne.
+        //Globálne prem. sa prepíšu podľa pracovných (temp.) až po stlačení tlačidla KEY_OK
+        
+    //zabezpecuje skok do modu 0 - zakladne zobrazenie, pri dalsom stlaceni klavesnice    !!!
+    // Podmienka pre rozdavanie uloh, podla toho co bolo stlacene
+        if (ui.keysBuf()) {  
+            char k = handleKey(ui.key());
             ui.clrBuf();
-            ui.clear();
-            zobrazenie();
+            if(k == KEY_CHMOD){
+              if((tempMode & 0x01) == 0x01) tempMode ^= (0x01 << 1);  // to iste ako XOR 0x02 //prepisy bitov, shift a zmena aktualneho bitu, 0x01 je presuvany 1. bit
+              tempMode ^= 0x01;
+              pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);
+            }
+            if(k == KEY_CHDIR){
+              if((tempMode & 0x04) == 0x04) tempMode ^= (0x01 << 3);  // to iste ako XOR 0x08   //prepisy bitov, shift a zmena aktualneho bitu, 0x01 je presuvany 1. bit
+              tempMode ^= 0x04;
+              pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);
+            }
+            if(k == KEY_NOK){
+              m = 0;
+              ui.clear();
+              zobrazenie();
+            }
+            if(k == KEY_OK){
+              pumpModes[m-1] = tempMode; 
+              pumpTimesStart[m-1] = tempTimeStart;
+              pumpTimesLength[m-1] = tempTimeLength;
+              m = 0;
+              ui.clear();
+              zobrazenie();
+            }
         }
+
     
-        if ((currentTime / 1000) >= ((savedTime / 1000) + 2)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
+
+        
+              //vypis jednej konkretnej pumpy sa aktualizuje raz za 3s
+        if ((currentTime / 1000) >= ((savedTime / 1000) + 3)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
             savedTime = currentTime;
-            ui.setCursor(10,6);
-            sprintf(mbuf,"Mode = %d",m);
-            ui.print(mbuf);
+            pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);    // -1 lebo pumpy su cislovane v poliach od 0, aby boli spojené s poliami, lebo fungujú od 0
         }
     }
 }
-
-
