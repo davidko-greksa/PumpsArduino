@@ -9,15 +9,23 @@ BV4612 ui(0x35);
 #define     POCET_PUMP      18      //Pocet pump
 #define     KEY_NOK         127     //kovertovanie tlacidiel
 #define     KEY_OK          126
-#define     KEY_CHMOD       125     //
-#define     KEY_CHDIR       124
+#define     KEY_CHMOD       125     //Tlacidlo na zmenu modu čerpania
+#define     KEY_CHDIR       124     //Tlačidlo na zmenu smeru čerpania
+#define     KEY_CHPARAM     123     //Tlacidlo, CH - change PARAM-parameters, pre MODE (mod 1 zo 4), a DIR - direction, rotujuce 4 hodnoty dokola
 #define     UNUSED_CELL     -1
 
 
+
 //globalne premenne pre vsetky funkcie
-char m; // 0 = display1, -1 =display2,  1 = jedno cerpadlo... 
+int16_t m; // 0 = display1, -1 = display2,  1 - 17 = jedno cerpadlo vypisane,
+        //X01 - X17 kde X<1,5> určuje zadavany parameter Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
 char kbuf;  //buffer pre vytváranie viacciferneho čísla
+char p_choice;  // premenná na uchovanie hodnoty práve zadavaneho parametra Mod=1 atd
 unsigned long savedTime, currentTime;
+
+// dočasné premenné = temporary, naše pracovné ktoré vidíme dynamicky sa meniť pri výpise 1 čerpadla, po výstupe z funkcie sa zapisuju 
+// do hlavných/východzích: pumpModes[POCET_PUMP]; pumpTimesStart[POCET_PUMP]; pumpTimesLength[POCET_PUMP]
+//Globálne prem. sa prepíšu podľa pracovných (temp.) až po stlačení tlačidla KEY_OK
 uint8_t tempMode; 
 uint16_t tempTimeStart;
 uint16_t tempTimeLength;
@@ -43,7 +51,7 @@ uint8_t ciara[1];
 //8 - Rvyprazdni
 //12 - Rnapln 
 
-//globalne pole - obsahuje aktualnu hodnotu modov pump. V kazdom chlieviku jedna pumpa.
+//globalne pole - obsahuje aktualnu hodnotu módov pump (1 zo 4 možných CD,VD..). V kazdom chlieviku jedna pumpa.
 uint8_t pumpModes[POCET_PUMP];
 
 //globalne pole pre casy spustenia cerpania jednotlivych pump - pociatocne casy
@@ -52,15 +60,21 @@ uint16_t pumpTimesStart[POCET_PUMP];
 //pole na zadavané časy čerpania z klavesnice - input
 uint16_t pumpTimesLength[POCET_PUMP];
 
+//pole na objemy-volume púmp
+uint16_t pumpVolumes[POCET_PUMP];
+
+//pole na prietoky-flow púmp
+uint8_t pumpFlow[POCET_PUMP];
+
 //Buffer, do ktoreho natlacime nazov (cislo) pumpy a akutalny mod
 char pumpPrintBuf[6];
 
 
-//vypise cislo a mod jednej vybranej pumpy 
+//vypise cislo a mod jednej vybranej pumpy pri zobrazení 3x3 na 1 vypis/stranu (f. voláme pri základnom mode 0) 
 void vypisPumpu(uint8_t p) {
     uint8_t pMod[2];
 
-    // zistujeme cerpaci mod vybranej pumpy - popis vyssie
+    // zistujeme čerpaci mod vybranej pumpy - popis vyssie
     switch (pumpModes[p] & 0x03) {
         case 0:
             pMod[0] = 0x43;
@@ -157,15 +171,15 @@ char handleKey(char c){
     case 1:  return 7; break;
     case 2:  return 8; break;
     case 3:  return 9; break;
-    case 4:  return KEY_CHMOD; break;   //CH= change, MOD = modu
+    case 4:  return KEY_CHPARAM; break;    //CH - change PARAM-parameters pre MODE (mod 1 zo 4), a DIR - direction
     case 5:  return 4; break;
     case 6:  return 5; break;
     case 7:  return 6; break;
-    case 8:  return KEY_CHDIR; break;    //CH = change, DIR = direction - smer
+    case 8:  return KEY_CHMOD; break;   //CH= change, MOD = modu
     case 9:  return 1; break;
     case 10: return 2; break;
     case 11: return 3; break;
-    case 12:  break;
+    case 12: return KEY_CHDIR; break;    //CH = change, DIR = direction - smer
     case 13: return KEY_NOK; break;
     case 14: return 0; break;
     case 15: return KEY_OK; break;
@@ -186,7 +200,7 @@ void zobrazenie() {
         if(i != 2 && i != 5){
             ui.dataLine(ciara, i, 42, 1); //smernik, riadok, stlpec, kolko bytov
             ui.dataLine(ciara, i, 85, 1);
-            delay(50);
+            delay(50);                                                                        //  DELAY!!!
         }
     }
 
@@ -227,18 +241,22 @@ void setup()
         pumpModes[i] =  i % 16; // testovaci vstup
         pumpTimesStart[i] = 0;   
         pumpTimesLength[i] = 0;   //zadany cas z klavesnice displeja 
+        pumpVolumes[i] = 0;
+        pumpFlow[i] = 0;
+
     }
 
     //Inicializacia premennych
     m = 0; // 0 = display, 1 = jedno cerpadlo... 
     kbuf = UNUSED_CELL;
     savedTime = 0;  // cas ku ktoremu porovnavam, loop stale prebieha, referencny kt. sa porovna s currentTime
+    p_choice = 0;
   
     zobrazenie();
 };
 
 void loop()
-{
+{   //Uroven 1 m-ka
     currentTime = millis();   //aktualny cas
     //unsigned int ctr;
     //mod zobrazenie 9 cerpadiel
@@ -289,19 +307,23 @@ void loop()
         }
     }
   
-    //MOD 1 VYPIS 1 CERPADLA  ------------
+    //2.Uroven m - MOD 1 VYPIS 1 CERPADLA  ------------
     if (m >= 1 && m <= POCET_PUMP) {
         currentTime = millis();
         char k;
-        //dočasné premenné = temporary, naše pracovné ktoré vidíme dynamicky sa meniť pri výpise 1 čerpadla. po výstupe z funkcie zanikajú a ostavaju iba globálne.
-        //Globálne prem. sa prepíšu podľa pracovných (temp.) až po stlačení tlačidla KEY_OK
         
-    //zabezpecuje skok do modu 0 - zakladne zobrazenie, pri dalsom stlaceni klavesnice    !!!
+        
+    //KEY_NOK a po zadani aj KEY_OK zabezpecuje skok do modu 0 - zakladne zobrazenie, pri dalsom stlaceni klavesnice    !!!
     // Podmienka pre rozdavanie uloh, podla toho co bolo stlacene
         if (ui.keysBuf()) {  
             char k = handleKey(ui.key());
             ui.clrBuf();
-            if(k == KEY_CHMOD){
+            if(k == KEY_CHPARAM){
+              p_choice = ((p_choice + 1) %5) +1;  // prva +1 -> navysovanie, %5 -> ostaneme v hraniciach 0 az 4 pre zadavanie, posledna +1 -> ideme v modoch uz 1 az 5
+              m = m + 100*p_choice;
+              break;    // continue ???
+            }
+            /*if(k == KEY_CHMOD){
               if((tempMode & 0x01) == 0x01) tempMode ^= (0x01 << 1);  // to iste ako XOR 0x02 //prepisy bitov, shift a zmena aktualneho bitu, 0x01 je presuvany 1. bit
               tempMode ^= 0x01;
               pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);
@@ -310,7 +332,7 @@ void loop()
               if((tempMode & 0x04) == 0x04) tempMode ^= (0x01 << 3);  // to iste ako XOR 0x08   //prepisy bitov, shift a zmena aktualneho bitu, 0x01 je presuvany 1. bit
               tempMode ^= 0x04;
               pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);
-            }
+            }*/
             if(k == KEY_NOK){
               m = 0;
               ui.clear();
@@ -335,4 +357,30 @@ void loop()
             pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);    // -1 lebo pumpy su cislovane v poliach od 0, aby boli spojené s poliami, lebo fungujú od 0
         }
     }
+
+    // 3.Uroven m - Výber co sa bude zadavat / nastavovat : Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
+    if(m > POCET_PUMP){
+      char tchoice = m / 100;   // z čísla pumpy vydelením 100 ziskame celočíselne 
+              //(neuvazuje sa obahovanie cisla pumpy napr 417 kde 17 je cislo pumpy) v akom p_choice sa nachadzame ci Mode/Dir/Vol...
+      char tpump = m % 100;   // zistenie cisla pumpz ktoru upravujeme
+      if((tchoice <= 1) || (tchoice >=5) || (tpump <=0) || (tpump >= POCET_PUMP){
+        m = 0;
+      }
+      else{
+          if (ui.keysBuf()) {  
+             char k = handleKey(ui.key());
+             ui.clrBuf();
+             if(k == KEY_CHPARAM){
+              
+             } 
+          } 
+          if(k == KEY_NOK){
+
+          }
+          if(k == KEY_OK){
+             
+          }
+          //TU BUDE ZOBRAZOVACIA CAST  
+      }
 }
+
