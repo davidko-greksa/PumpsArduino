@@ -17,8 +17,8 @@ BV4612 ui(0x35);
 
 
 //globalne premenne pre vsetky funkcie
-int16_t m; // 0 = display1, -1 = display2,  1 - 17 = jedno cerpadlo vypisane,
-        //X01 - X17 kde X<1,5> určuje zadavany parameter Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
+int16_t m;  // 0 = display1, -1 = display2,  1 - 17 = jedno cerpadlo vypisane,
+            //X01 - X17 kde X<1,5> určuje zadavany parameter Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
 char kbuf;  //buffer pre vytváranie viacciferneho čísla
 char p_choice;  // premenná na uchovanie hodnoty práve zadavaneho parametra Mod=1 atd
 unsigned long savedTime, currentTime;
@@ -154,38 +154,49 @@ void vypisPumpu(uint8_t p) {
 
 //Výpis 1 vybranej pumpy s detailami
 void pumpDetail(uint8_t p, uint8_t mode, uint16_t tStart, uint16_t tLength ){
-  ui.clear();
-  ui.print(p);
-  ui.print("\n");
-  ui.print(mode);
-  //ui.print("\n");
-  //ui.print(pumpTimesStart[p]);
-  //ui.print("\n");
-  //ui.print(pumpTimesLength[p]);
+    ui.clear();
+    ui.print(p);
+    ui.print("\n");
+    ui.print(mode);
+    //ui.print("\n");
+    //ui.print(pumpTimesStart[p]);
+    //ui.print("\n");
+    //ui.print(pumpTimesLength[p]);
 }
 
+// Keyboard Layout:
+//
+// |---|---|---|---|
+// | 7 | 8 | 9 |CHP|
+// |---|---|---|---|
+// | 4 | 5 | 6 |   |
+// |---|---|---|---|
+// | 1 | 2 | 3 |   |
+// |---|---|---|---|
+// | F | 0 | T |   |
+// |---|---|---|---|
 
 //Funkcia na prepis zadaneho cisla z klavesnice na pouzivane v kode
 char handleKey(char c){
-  switch (c) {
-    case 1:  return 7; break;
-    case 2:  return 8; break;
-    case 3:  return 9; break;
-    case 4:  return KEY_CHPARAM; break;    //CH - change PARAM-parameters pre MODE (mod 1 zo 4), a DIR - direction
-    case 5:  return 4; break;
-    case 6:  return 5; break;
-    case 7:  return 6; break;
-    case 8:  return KEY_CHMOD; break;   //CH= change, MOD = modu
-    case 9:  return 1; break;
-    case 10: return 2; break;
-    case 11: return 3; break;
-    case 12: return KEY_CHDIR; break;    //CH = change, DIR = direction - smer
-    case 13: return KEY_NOK; break;
-    case 14: return 0; break;
-    case 15: return KEY_OK; break;
-    case 16:  break;
-  } 
-  return 0; 
+    switch (c) {
+        case 1:  return 7; break;
+        case 2:  return 8; break;
+        case 3:  return 9; break;
+        case 4:  return KEY_CHPARAM; break;    //CH - change PARAM-parameters pre MODE (mod 1 zo 4), a DIR - direction
+        case 5:  return 4; break;
+        case 6:  return 5; break;
+        case 7:  return 6; break;
+        case 8:  return KEY_CHMOD; break;   //CH= change, MOD = modu
+        case 9:  return 1; break;
+        case 10: return 2; break;
+        case 11: return 3; break;
+        case 12: return KEY_CHDIR; break;    //CH = change, DIR = direction - smer
+        case 13: return KEY_NOK; break;
+        case 14: return 0; break;
+        case 15: return KEY_OK; break;
+        case 16:  break;
+    } 
+    return 0; 
 }
 
 //Vypis celeho HOME - vychodzi zobrazenie
@@ -261,33 +272,33 @@ void loop()
     //unsigned int ctr;
     //mod zobrazenie 9 cerpadiel
     if (m == 0 || m == -1) { 
-	
+
         //handler zmeny modu
         char k;   
         if(ui.keysBuf()) {      //po staceni klavesy zmen mod
             k = handleKey(ui.key());
             ui.clrBuf();
             //podmienky na rozoznanie či pri zadavaní VIACCIFERNEHO čisla už máme niečo zadané alebo nie 
-            if(k>=0 && k<=9 && kbuf != UNUSED_CELL){      
-              kbuf = kbuf*10 + k;
+            if(k >= 0 && k <= 9 && kbuf != UNUSED_CELL){      
+                kbuf = (kbuf * 10) + k;
             }
-            if(k>=0 && k<=9 && kbuf == UNUSED_CELL){
-              kbuf = k;
+            if(k >= 0 && k <= 9 && kbuf == UNUSED_CELL){
+                kbuf = k;
             }
             if(k == KEY_OK){
-              if(kbuf <= POCET_PUMP)
-                {m = kbuf;}
-              tempMode = pumpModes[m-1]; 
-              tempTimeStart = pumpTimesStart[m-1];
-              tempTimeLength = pumpTimesLength[m-1];
-              kbuf = UNUSED_CELL;
+                if(kbuf <= POCET_PUMP)
+                    {m = kbuf;}
+                tempMode = pumpModes[m-1]; 
+                tempTimeStart = pumpTimesStart[m-1];
+                tempTimeLength = pumpTimesLength[m-1];
+                kbuf = UNUSED_CELL;
             }
             if(k == KEY_NOK){
-              kbuf = UNUSED_CELL;
+                kbuf = UNUSED_CELL;
             }
         }
         
-		//Porovnanie časov namiesto funkcie Delay
+        //Porovnanie časov namiesto funkcie Delay
         if ((currentTime / 1000) >= ((savedTime / 1000) + PREBLIK)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
             savedTime = currentTime;  //aktualny cas sa stava novym referencnym po kazdych 6s
             if (m == 0) {     //detekuje sa zobrazenie 1.vypisu, zobrazí druhych 9 cerpadiel
@@ -313,74 +324,75 @@ void loop()
         char k;
         
         
-    //KEY_NOK a po zadani aj KEY_OK zabezpecuje skok do modu 0 - zakladne zobrazenie, pri dalsom stlaceni klavesnice    !!!
-    // Podmienka pre rozdavanie uloh, podla toho co bolo stlacene
+        //KEY_NOK a po zadani aj KEY_OK zabezpecuje skok do modu 0 - zakladne zobrazenie, pri dalsom stlaceni klavesnice    !!!
+        // Podmienka pre rozdavanie uloh, podla toho co bolo stlacene
         if (ui.keysBuf()) {  
             char k = handleKey(ui.key());
             ui.clrBuf();
             if(k == KEY_CHPARAM){
-              p_choice = ((p_choice + 1) %5) +1;  // prva +1 -> navysovanie, %5 -> ostaneme v hraniciach 0 az 4 pre zadavanie, posledna +1 -> ideme v modoch uz 1 az 5
-              m = m + 100*p_choice;
-              break;    // continue ???
+                p_choice = ((p_choice + 1) % 5) + 1;  // prva +1 -> navysovanie, %5 -> ostaneme v hraniciach 0 az 4 pre zadavanie, posledna +1 -> ideme v modoch uz 1 az 5
+                m = m + (100 * p_choice);
+                break;    // continue ???
             }
             /*if(k == KEY_CHMOD){
-              if((tempMode & 0x01) == 0x01) tempMode ^= (0x01 << 1);  // to iste ako XOR 0x02 //prepisy bitov, shift a zmena aktualneho bitu, 0x01 je presuvany 1. bit
-              tempMode ^= 0x01;
-              pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);
-            }
-            if(k == KEY_CHDIR){
-              if((tempMode & 0x04) == 0x04) tempMode ^= (0x01 << 3);  // to iste ako XOR 0x08   //prepisy bitov, shift a zmena aktualneho bitu, 0x01 je presuvany 1. bit
-              tempMode ^= 0x04;
-              pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);
-            }*/
+                if((tempMode & 0x01) == 0x01) tempMode ^= (0x01 << 1);  // to iste ako XOR 0x02 //prepisy bitov, shift a zmena aktualneho bitu, 0x01 je presuvany 1. bit
+                tempMode ^= 0x01;
+                pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);
+                }
+                if(k == KEY_CHDIR){
+                if((tempMode & 0x04) == 0x04) tempMode ^= (0x01 << 3);  // to iste ako XOR 0x08   //prepisy bitov, shift a zmena aktualneho bitu, 0x01 je presuvany 1. bit
+                tempMode ^= 0x04;
+                pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);
+                }*/
             if(k == KEY_NOK){
-              m = 0;
-              ui.clear();
-              zobrazenie();
+                m = 0;
+                ui.clear();
+                zobrazenie();
             }
             if(k == KEY_OK){
-              pumpModes[m-1] = tempMode; 
-              pumpTimesStart[m-1] = tempTimeStart;
-              pumpTimesLength[m-1] = tempTimeLength;
-              m = 0;
-              ui.clear();
-              zobrazenie();
+                pumpModes[m-1] = tempMode; 
+                pumpTimesStart[m-1] = tempTimeStart;
+                pumpTimesLength[m-1] = tempTimeLength;
+                m = 0;
+                ui.clear();
+                zobrazenie();
             }
         }
 
-    
-
-        
-              //vypis jednej konkretnej pumpy sa aktualizuje raz za 3s
+        //vypis jednej konkretnej pumpy sa aktualizuje raz za 3s
         if ((currentTime / 1000) >= ((savedTime / 1000) + 3)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
             savedTime = currentTime;
-            pumpDetail(m-1,tempMode, tempTimeStart, tempTimeLength);    // -1 lebo pumpy su cislovane v poliach od 0, aby boli spojené s poliami, lebo fungujú od 0
+            pumpDetail(m-1, tempMode, tempTimeStart, tempTimeLength);    // -1 lebo pumpy su cislovane v poliach od 0, aby boli spojené s poliami, lebo fungujú od 0
         }
     }
 
     // 3.Uroven m - Výber co sa bude zadavat / nastavovat : Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
     if(m > POCET_PUMP){
-      char tchoice = m / 100;   // z čísla pumpy vydelením 100 ziskame celočíselne 
-              //(neuvazuje sa obahovanie cisla pumpy napr 417 kde 17 je cislo pumpy) v akom p_choice sa nachadzame ci Mode/Dir/Vol...
-      char tpump = m % 100;   // zistenie cisla pumpz ktoru upravujeme
-      if((tchoice <= 1) || (tchoice >=5) || (tpump <=0) || (tpump >= POCET_PUMP){
-        m = 0;
-      }
-      else{
-          if (ui.keysBuf()) {  
-             char k = handleKey(ui.key());
-             ui.clrBuf();
-             if(k == KEY_CHPARAM){
-              
-             } 
-          } 
-          if(k == KEY_NOK){
-
-          }
-          if(k == KEY_OK){
-             
-          }
-          //TU BUDE ZOBRAZOVACIA CAST  
-      }
+        char tchoice = m / 100;   // z čísla pumpy vydelením 100 ziskame celočíselne 
+        //(neuvazuje sa obahovanie cisla pumpy napr 417 kde 17 je cislo pumpy) v akom p_choice sa nachadzame ci Mode/Dir/Vol...
+        char tpump = m % 100;   // zistenie cisla pumpz ktoru upravujeme
+        //osetrenie spravnosti vstupu. Ak nie je spravny, ideme spat na home.
+        if((tchoice <= 1) || (tchoice > = 5) || (tpump < = 0) || (tpump >= POCET_PUMP){
+            m = 0;
+        }
+        else {
+            if (ui.keysBuf()) {  
+                char k = handleKey(ui.key());
+                ui.clrBuf();
+                if(k == KEY_CHPARAM){
+                    
+                }
+                if(k == KEY_NOK){
+                
+                }
+                if(k == KEY_OK){
+                
+                }
+            }
+          
+            //TU BUDE ZOBRAZOVACIA CAST  
+            
+        }
+    }
 }
 
