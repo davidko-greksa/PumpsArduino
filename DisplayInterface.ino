@@ -21,7 +21,7 @@ int16_t m;  // 0 = display1, -1 = display2,  1 - 17 = jedno cerpadlo vypisane,
             //X01 - X17 kde X<1,5> určuje zadavany parameter Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
 long kbuf;  //buffer pre vytváranie viacciferneho čísla
 char p_choice;  // premenná na uchovanie hodnoty práve zadavaneho parametra Mod=1 atd
-char chparMask; //premenna ktora jednotlivymi bitmi urcuje co sme zmenili v 3. mode menu (to sa bude ukladat)
+uint8_t chparMask; //premenna ktora jednotlivymi bitmi urcuje co sme zmenili v 3. mode menu (to sa bude ukladat)
 unsigned long savedTime, currentTime;
 
 // dočasné premenné = temporary, naše pracovné ktoré vidíme dynamicky sa meniť pri výpise 1 čerpadla, po výstupe z funkcie sa zapisuju 
@@ -177,7 +177,11 @@ void pumpDetail(uint8_t p) {
     ui.print(pumpFlow[p]);
     ui.setCursor(0,5);
     ui.print("Time: ");
-    ui.print(pumpTimesLength[p]);
+    if(pumpTimesLength[p] != 0){
+        ui.print(pumpTimesLength[p] - ((millis() / 1000) - pumpTimesStart[p]));
+    }else{
+        ui.print(0);  
+    }
 }
 
 // Keyboard Layout:
@@ -234,9 +238,12 @@ void zobrazenie() {
     int c;   
     switch (m){        
         case 0:   // Obrazovka 1 -> cerpadla 1 - 9 (indexy 0-8)
-            for (char i = 0; i < 9; i++)      //ak nie su {} tak berie iba nasledujuci prikaz
-                vypisPumpu(i);
-            delay(10);
+            currentTime = millis();
+            if (currentTime >= (savedTime + 100)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
+                savedTime = currentTime;
+                for (char i = 0; i < 9; i++)      //ak nie su {} tak berie iba nasledujuci prikaz
+                    vypisPumpu(i);
+            }
             break;
         case -1:  // Obrazovka 2 -> cerpadla 10-18 (indexy 9-17)
             for(char i = 9; i < 18; i++)      //ak nie su {} tak berie iba nasledujuci prikaz
@@ -245,6 +252,20 @@ void zobrazenie() {
     }
 }
 
+// aktualizuje hodnoty časov pumpTimeLength v poliach pre každe čerpadlo, (a tiez aktualizuje pumpValues.)
+//porovnavame ci sme docerpali, ak hej vyplne sa pumpa a pumpTimeLength sa nastavi na 0 
+void updateValues(){
+  uint8_t i;  //cislo pumpy
+  uint32_t timeDif;   // difference - rozdiel
+  for(i = 0; i < POCET_PUMP; i++){
+      timeDif =  (millis() / 1000 ) - pumpTimesStart[i];
+      if(timeDif >= pumpTimesLength[i]){
+         pumpTimesLength[i] = 0;
+         pumpTimesStart[i] = 0; 
+      }
+  }
+  
+}
 
 void setup() {
 
@@ -302,7 +323,8 @@ void loop() {
                 if(kbuf <= POCET_PUMP) {
                     m = kbuf;
                 }
-                p_choice = 4;
+                p_choice = 0;
+                chparMask = 0;
                 //pripradovanie hlavnych dlhodobych hodnot do kratkodobych -docastnych pre okamzite zobrazenie-vypis
                 tempMode = pumpModes[m-1];    // prva pumpa je indexovana v poli ako 0
                 tempDir = pumpDir[m-1];
@@ -350,7 +372,7 @@ void loop() {
             ui.clrBuf();
             
             if(k == KEY_CHPARAM) {
-                p_choice = ((p_choice + 1) % 5) + 1;  // prva +1 -> navysovanie, %5 -> ostaneme v hraniciach 0 az 4 pre zadavanie, posledna +1 -> ideme v modoch uz 1 az 5
+                p_choice = (p_choice % 5) + 1;  //%5 -> ostaneme v hraniciach 0 az 4 pre zadavanie, posledna +1 -> ideme v modoch uz 1 az 5
                 m = m + (100 * p_choice);
               //  continue;    // continue ???
             }
@@ -389,7 +411,7 @@ void loop() {
                 char k = handleKey(ui.key());
                 ui.clrBuf();
                 if(k == KEY_CHPARAM) {
-                    m = ((m + 100) % 500) + 100;
+                    m = (m % 500) + 100;
                     kbuf = UNUSED_CELL;  // pri zadani cisla a naslednom stlaceni CHPARAM sa buffer nuluje a neuklada zadane cislo
                     return;
                 }
@@ -408,17 +430,18 @@ void loop() {
                         m = m % 100;  // Prechod do Urovne 2
                         //Ulozenie vsetkeho pomocou chparMask
                         // (chparMask & cislo) bitovo sa iba porovnava, 
-                        if(chparMask & 2 == 2)
+                        if((chparMask & 2) == 2)
                             pumpModes[tpump] = tempMode;
-                        if(chparMask & 4 == 4)
+                        if((chparMask & 4) == 4)
                             pumpDir[tpump] = tempDir;
-                        if(chparMask & 8 == 8)
+                        if((chparMask & 8) == 8)
                             pumpVolumes[tpump] = tempVol;
-                        if(chparMask & 16 == 16)
+                        if((chparMask & 16) == 16)
                             pumpFlow[tpump] = tempFlow;
-                        if(chparMask & 32 == 32)
+                        if((chparMask & 32) == 32){
                             pumpTimesLength[tpump] = tempTimeLength;
-                        pumpTimesStart[tpump] = millis() / 1000; //Aktualizacia pumpTimesStart[]
+                            pumpTimesStart[tpump] = millis() / 1000; //Aktualizacia pumpTimesStart[] pre vybranu pumpu, ale od zadania casu cerpania 
+                        }
                         chparMask = 0;
                         return; // "loop" zacne odznova, a kedze "m" je globalna tak sa dostaneme do Vypisu 1 pumpy (m = 1)
                     } else {  //if(kbuf != UNUSED_CELL) - sekcia niektoreho zadavania bez prechodu do Vypisu 1 pumpy
@@ -447,7 +470,22 @@ void loop() {
             }
         }
           
-        //TU BUDE ZOBRAZOVACIA CAST   
-    }
-}
+        //TU BUDE ZOBRAZOVACIA CAST
+        
+        currentTime = millis();
+        if (currentTime >= (savedTime + 200)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
+            savedTime = currentTime;
+            ui.clear();
+            ui.setCursor(0,7);
+            ui.print(m);
+            ui.setCursor(60,4);
+            ui.print(chparMask);
+            ui.setCursor(60,7);
+            ui.print(kbuf);
 
+        }
+          
+    }
+    //Tu je aktualizacia časov - kolko sa už prečerpalo - dekrementacia napr. každú sekundu.
+    updateValues();
+}
