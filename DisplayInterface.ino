@@ -42,6 +42,18 @@ uint8_t Rvyprazdni[4];
 uint8_t dvojbodka[1];
 uint8_t ciara[1];
 
+//Mody pump:
+//0 -  CD (continuous dispensing)
+//1 -  VD (volume dispensing)
+//2 -  D  (dose over time)
+//3 -  CF (constant flow rate)
+
+//Sipky:
+//0 - Lvyprazdni
+//1 - Lnapln
+//2 - Rvyprazdni
+//3 - Rnapln 
+
 
 //globalne pole - obsahuje aktualnu hodnotu módov pump (1 zo 4 možných CD,VD..). V kazdom chlieviku jedna pumpa.
 uint8_t pumpModes[POCET_PUMP];
@@ -400,7 +412,7 @@ void loop() {
 
     // 3.Uroven m - Výber co sa bude zadavat / nastavovat : Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
     if(m > POCET_PUMP) {
-        char tchoice = m / 100;   // z čísla pumpy vydelením 100 ziskame celočíselne v akom p_choice sa nachadzame ci Mode/Dir/Vol...
+        char tchoice = m / 100;   // z čísla pumpy vydelením 100 ziskame CELOČÍSELNE v akom p_choice sa nachadzame ci Mode/Dir/Vol...
         //(neuvazuje sa obahovanie cisla pumpy napr 417 kde 17 je cislo pumpy) /tchoice - temporary choice
         char tpump = (m % 100) -1 ;   // zistenie cisla pumpy ktoru upravujeme, ale cislovanie z pohladu pola tj. 0-17 (ta -1)
         //osetrenie spravnosti vstupu. Ak nie je spravny, ideme spat na home.
@@ -473,15 +485,49 @@ void loop() {
         //TU BUDE ZOBRAZOVACIA CAST
         
         currentTime = millis();
-        if (currentTime >= (savedTime + 200)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
+        if (currentTime >= (savedTime + 800)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
             savedTime = currentTime;
             ui.clear();
-            ui.setCursor(0,7);
+            ui.setCursor(80,6);
             ui.print(m);
-            ui.setCursor(60,4);
-            ui.print(chparMask);
-            ui.setCursor(60,7);
-            ui.print(kbuf);
+            //ui.setCursor(60,5);
+            //ui.print(chparMask);
+            ui.setCursor(0,6);
+            ui.print("input:");          
+            ui.setCursor(0,7);
+            if(kbuf == -1)
+                ui.print("invalid");
+            else{ui.print(kbuf);}
+
+            switch (tchoice){
+                case 1: 
+                        ui.setCursor(0,0);
+                        ui.print("Mode");
+                        ui.setCursor(0,1);
+                        ui.print("0 = CD, 1 = VD");
+                        ui.setCursor(0,2);
+                        ui.print("2 =  D, 3 = CF"); break;
+                case 2:
+                        ui.setCursor(0,0);
+                        ui.print("Direction");
+                        ui.setCursor(0,1);
+                        ui.print("0 = Lvyprazdni");
+                        ui.setCursor(0,2);
+                        ui.print("1 = Lnapln");
+                        ui.setCursor(0,3);
+                        ui.print("2 = Rvyprazdni");
+                        ui.setCursor(0,4);
+                        ui.print("3 = Rnapln"); break;
+                case 3:
+                        ui.setCursor(0,0);
+                        ui.print("Flow [ml / min]"); break;      // TO DO - dopis maximalny
+                case 4:
+                        ui.setCursor(0,0);
+                        ui.print("Volume [ ml ]"); break;
+                case 5:
+                        ui.setCursor(0,0);
+                        ui.print("Time [ HH:MM:SS ]"); break;       
+            }
 
         }
           
@@ -489,3 +535,9 @@ void loop() {
     //Tu je aktualizacia časov - kolko sa už prečerpalo - dekrementacia napr. každú sekundu.
     updateValues();
 }
+
+//TO DO:
+//Odladit DELAY funkcie + nahradit vo funkcii zobrazenie()
+//KONTROLA vsetkych OK-NOK ci pracuju spravne, ukladaju co treba, NOK neuklada, ci to funguje spravne, hranicne priprady
+//Vypis z modu 3
+//pories preblik pri zadavani Direction
