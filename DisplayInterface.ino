@@ -130,7 +130,7 @@ void vypisPumpu(uint8_t p) {
     }
 
     //po zapnuti (v nenulovom case) a tiez naplni pomocou sprintf  pumpTimesBuf vo formate minuty:sekundy 
-    if (pumpTimesStart[p] != 0){
+    if (pumpTimesStart[p] != 0) {
         char timePrintBuf[6];
         char minutes = ((millis() / 1000) - pumpTimesStart[p]) / 60;
         char seconds = ((millis() / 1000) - pumpTimesStart[p]) % 60;
@@ -146,21 +146,19 @@ void vypisPumpu(uint8_t p) {
 
 
 //zoberie format HH:MM:SS a prevedie na string cisel v sekundach
-uint16_t timeToSec(long t){
-  if(t / 10000 >= 18){  // test ci je dobre cislo, ak nie vrati uint 0, lebo nevie ulozit take velke cislo - 18hodin
-     return 0;
-  }  
-  uint16_t timeSec = 0;
-  timeSec += t % 100; // sekundy 
-  t = t / 100;      // oseknutie sekund - poslednzch 2 cisel zo stringu cisel
-  timeSec += (t % 100) * 60;   // minuty
-  t = t / 100;
-  timeSec += (t % 100) * 3600;  // hodiny
-  return timeSec;
+uint16_t timeToSec(long t) {
+    if(t / 10000 >= 18) return 0;  // test ci je dobre cislo, ak nie vrati uint 0, lebo nevie ulozit take velke cislo - 18hodin
+    uint16_t timeSec = 0;
+    timeSec += t % 100;             // sekundy 
+    t = t / 100;                    // oseknutie sekund - poslednzch 2 cisel zo stringu cisel
+    timeSec += (t % 100) * 60;      // minuty
+    t = t / 100;
+    timeSec += (t % 100) * 3600;    // hodiny
+    return timeSec;
 }
 
 //Výpis 1 vybranej pumpy s detailami
-void pumpDetail(uint8_t p){
+void pumpDetail(uint8_t p) {
     ui.clear();
     ui.setCursor(0,0);
     ui.print("pumpa: ");
@@ -180,12 +178,6 @@ void pumpDetail(uint8_t p){
     ui.setCursor(0,5);
     ui.print("Time: ");
     ui.print(pumpTimesLength[p]);
-    
-    /*    DOPLN VYPISOVANIE UDAJOV PRE 1 PUMPU : cas,smer.., NAPATIE !!!!  */
-    //ui.print("\n");
-    //ui.print(pumpTimesStart[p]);
-    //ui.print("\n");
-    //ui.print(pumpTimesLength[p]);
 }
 
 // Keyboard Layout:
@@ -254,10 +246,7 @@ void zobrazenie() {
 }
 
 
-
-
-void setup()
-{
+void setup() {
 
     //Displej
     ui.contrast(10);
@@ -290,11 +279,11 @@ void setup()
     zobrazenie();
 };
 
-void loop()
-{   //1. Uroven m (m = 0 / -1) - ZOBRAZENIE 9+9 čerp. ---------
+void loop() {   
+
     currentTime = millis();   //aktualny cas
-    //unsigned int ctr;
-    //mod zobrazenie 9 cerpadiel
+    
+    //1. Uroven m (m = 0 / -1) - ZOBRAZENIE 9+9 čerp. ---------
     if (m == 0 || m == -1) { 
 
         //handler zmeny modu
@@ -310,9 +299,10 @@ void loop()
                 kbuf = k;
             }
             if(k == KEY_OK){
-                if(kbuf <= POCET_PUMP)
-                    {m = kbuf;}
-                    p_choice = 4;
+                if(kbuf <= POCET_PUMP) {
+                    m = kbuf;
+                }
+                p_choice = 4;
                 //pripradovanie hlavnych dlhodobych hodnot do kratkodobych -docastnych pre okamzite zobrazenie-vypis
                 tempMode = pumpModes[m-1];    // prva pumpa je indexovana v poli ako 0
                 tempDir = pumpDir[m-1];
@@ -358,20 +348,21 @@ void loop()
         if (ui.keysBuf()) {  
             char k = handleKey(ui.key());
             ui.clrBuf();
-            if(k == KEY_CHPARAM){
+            
+            if(k == KEY_CHPARAM) {
                 p_choice = ((p_choice + 1) % 5) + 1;  // prva +1 -> navysovanie, %5 -> ostaneme v hraniciach 0 az 4 pre zadavanie, posledna +1 -> ideme v modoch uz 1 az 5
                 m = m + (100 * p_choice);
               //  continue;    // continue ???
             }
-            if(k == KEY_NOK){
+            if(k == KEY_NOK) {
                 m = 0;
                 ui.clear();
                 zobrazenie();
             }
-            if(k == KEY_OK){
+            if(k == KEY_OK) {
                 /*pumpModes[m-1] = tempMode;    // m-1 pumpa (real čislovanie od 1, v programe od 0) sa prepíse hlavný mod podla dočasneho
-                pumpTimesStart[m-1] = tempTimeStart;
-                pumpTimesLength[m-1] = tempTimeLength;*/ //riesime v 3.urovni
+                  pumpTimesStart[m-1] = tempTimeStart;
+                  pumpTimesLength[m-1] = tempTimeLength;*/ //riesime v 3.urovni
                 m = 0;
                 ui.clear();
                 zobrazenie();
@@ -386,78 +377,77 @@ void loop()
     }
 
     // 3.Uroven m - Výber co sa bude zadavat / nastavovat : Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
-    if(m > POCET_PUMP){
+    if(m > POCET_PUMP) {
         char tchoice = m / 100;   // z čísla pumpy vydelením 100 ziskame celočíselne v akom p_choice sa nachadzame ci Mode/Dir/Vol...
         //(neuvazuje sa obahovanie cisla pumpy napr 417 kde 17 je cislo pumpy) /tchoice - temporary choice
         char tpump = (m % 100) -1 ;   // zistenie cisla pumpy ktoru upravujeme, ale cislovanie z pohladu pola tj. 0-17 (ta -1)
         //osetrenie spravnosti vstupu. Ak nie je spravny, ideme spat na home.
-        if((tchoice < 1) || (tchoice > 5) || (tpump < 0) || (tpump >= POCET_PUMP)){
+        if((tchoice < 1) || (tchoice > 5) || (tpump < 0) || (tpump >= POCET_PUMP)) {
             m = 0;
-        }
-        else {
+        } else {
             if (ui.keysBuf()) {  
                 char k = handleKey(ui.key());
                 ui.clrBuf();
-                if(k == KEY_CHPARAM){
+                if(k == KEY_CHPARAM) {
                     m = ((m + 100) % 500) + 100;
                     kbuf = UNUSED_CELL;  // pri zadani cisla a naslednom stlaceni CHPARAM sa buffer nuluje a neuklada zadane cislo
                     return;
                 }
-                if(k == KEY_NOK){
-                    if(kbuf == UNUSED_CELL){    // ak sme nezadali ziadne cislo ideme späť, určije ktorý NOK je použitý - teraz na vratenie sa do Mode / Dir / Vol.. (nevraciam sa na Vypis 1 pumpy)
-                      m = m % 100; // Prechod do Urovne 2
-                      chparMask = 0;
-                      return; // "loop" zacne odznova, a kedze "m" je globalna tak sa dostaneme do Vypisu 1 pumpy (m = 1)
-                    }else{  //if(kbuf != UNUSED_CELL)  - NOK ked sme zadali cislo 
+                if(k == KEY_NOK) {
+                    if(kbuf == UNUSED_CELL) {    // ak sme nezadali ziadne cislo ideme späť, určije ktorý NOK je použitý - teraz na vratenie sa do Mode / Dir / Vol.. (nevraciam sa na Vypis 1 pumpy)
+                        m = m % 100; // Prechod do Urovne 2
+                        chparMask = 0;
+                        return; // "loop" zacne odznova, a kedze "m" je globalna tak sa dostaneme do Vypisu 1 pumpy (m = 1)
+                    } else {  //if(kbuf != UNUSED_CELL)  - NOK ked sme zadali cislo 
                         kbuf = UNUSED_CELL;
                         return;
                     }
                 }
-                if(k == KEY_OK){
-                    if(kbuf == UNUSED_CELL){    // ak sme nezadali ziadne cislo ideme späť, určije ktorý OK je použitý - teraz na vratenie sa do Mode / Dir / Vol.. (nevraciam sa na Vypis 1 pumpy)
-                      m = m % 100;  // Prechod do Urovne 2
-                       //Ulozenie vsetkeho pomocou chparMask
-                       // (chparMask & cislo) bitovo sa iba porovnava, 
-                       if(chparMask & 2 == 2){
-                        pumpModes[tpump] = tempMode; }
-                       if(chparMask & 4 == 4){
-                        pumpDir[tpump] = tempDir; }
-                        if(chparMask & 8 == 8){
-                        pumpVolumes[tpump] = tempVol; }
-                        if(chparMask & 16 == 16){
-                        pumpFlow[tpump] = tempFlow; }
-                        if(chparMask & 32 == 32){
-                        pumpTimesLength[tpump] = tempTimeLength; } 
-                      pumpTimesStart[tpump] = millis() / 1000; //Aktualizacia pumpTimesStart[]
-                      chparMask = 0;
-                      return; // "loop" zacne odznova, a kedze "m" je globalna tak sa dostaneme do Vypisu 1 pumpy (m = 1)
-                    }else{  //if(kbuf != UNUSED_CELL) - sekcia niektoreho zadavania bez prechodu do Vypisu 1 pumpy
-                        switch(tchoice){
-                          case 1: tempMode = kbuf; chparMask |= 2; // priORuj- setbit, konkretny IBA bit nastavime v maske ci nastala zmena, teda ci sa neskor zapise z temp. premennych do hlavnych 
-                                  //TO DO - PORIESIT NEVALIDNE VSTUPY !!!!
-                                  break; 
-                          case 2: tempDir = kbuf; chparMask |= 4; break;
-                          case 3: tempVol = kbuf; chparMask |= 8; break;   
-                          case 4: tempFlow = kbuf; chparMask |= 16; break;
-                          case 5: tempTimeLength = timeToSec(kbuf); chparMask |= 32; break;
-                          //TO DO - nechat v tempe vo formate HH:MM:SS koli vypisu???
+                if(k == KEY_OK) {
+                    if(kbuf == UNUSED_CELL) {    // ak sme nezadali ziadne cislo ideme späť, určije ktorý OK je použitý - teraz na vratenie sa do Mode / Dir / Vol.. (nevraciam sa na Vypis 1 pumpy)
+                        m = m % 100;  // Prechod do Urovne 2
+                        //Ulozenie vsetkeho pomocou chparMask
+                        // (chparMask & cislo) bitovo sa iba porovnava, 
+                        if(chparMask & 2 == 2)
+                            pumpModes[tpump] = tempMode;
+                        if(chparMask & 4 == 4)
+                            pumpDir[tpump] = tempDir;
+                        if(chparMask & 8 == 8)
+                            pumpVolumes[tpump] = tempVol;
+                        if(chparMask & 16 == 16)
+                            pumpFlow[tpump] = tempFlow;
+                        if(chparMask & 32 == 32)
+                            pumpTimesLength[tpump] = tempTimeLength;
+                        pumpTimesStart[tpump] = millis() / 1000; //Aktualizacia pumpTimesStart[]
+                        chparMask = 0;
+                        return; // "loop" zacne odznova, a kedze "m" je globalna tak sa dostaneme do Vypisu 1 pumpy (m = 1)
+                    } else {  //if(kbuf != UNUSED_CELL) - sekcia niektoreho zadavania bez prechodu do Vypisu 1 pumpy
+                        switch(tchoice) {
+                            case 1:
+                                tempMode = kbuf; chparMask |= 2; // priORuj- setbit, konkretny IBA bit nastavime v maske ci nastala zmena, teda ci sa neskor zapise z temp. premennych do hlavnych 
+                                //TO DO - PORIESIT NEVALIDNE VSTUPY !!!!
+                                break; 
+                            case 2: tempDir = kbuf; chparMask |= 4; break;
+                            case 3: tempVol = kbuf; chparMask |= 8; break;   
+                            case 4: tempFlow = kbuf; chparMask |= 16; break;
+                            case 5: tempTimeLength = timeToSec(kbuf); chparMask |= 32; break;
+                            //TO DO - nechat v tempe vo formate HH:MM:SS koli vypisu???
                         }
-                      kbuf = UNUSED_CELL;
-                      return;
+                        kbuf = UNUSED_CELL;
+                        return;
                     }
-                 }
-                  if(k >= 0 && k <= 9 && kbuf != UNUSED_CELL){      // zadavanie cisel - hodnot
-                    kbuf = (kbuf * 10) + k;
-                  }
-                  if(k >= 0 && k <= 9 && kbuf == UNUSED_CELL){
-                   kbuf = k;
-                  }  
                 }
+                
+                if(k >= 0 && k <= 9 && kbuf != UNUSED_CELL)      // zadavanie cisel - hodnot
+                    kbuf = (kbuf * 10) + k;
+                
+                if(k >= 0 && k <= 9 && kbuf == UNUSED_CELL)
+                   kbuf = k;
+                
             }
-          
-            //TU BUDE ZOBRAZOVACIA CAST  
-            
         }
+          
+        //TU BUDE ZOBRAZOVACIA CAST   
     }
-
+}
 
