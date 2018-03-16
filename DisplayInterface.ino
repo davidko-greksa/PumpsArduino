@@ -160,11 +160,27 @@ uint16_t timeToSec(long t){
 }
 
 //Výpis 1 vybranej pumpy s detailami
-void pumpDetail(uint8_t p, uint8_t mode, uint16_t tStart, uint16_t tLength ){
+void pumpDetail(uint8_t p){
     ui.clear();
+    ui.setCursor(0,0);
+    ui.print("pumpa: ");
     ui.print(p);
-    ui.print("\n");
-    ui.print(mode);
+    ui.setCursor(0,1);
+    ui.print("Mod: ");
+    ui.print(pumpModes[p]);
+    ui.setCursor(0,2);
+    ui.print("Dir: ");
+    ui.print(pumpDir[p]);
+    ui.setCursor(0,3);
+    ui.print("Volume: ");
+    ui.print(pumpVolumes[p]);
+    ui.setCursor(0,4);
+    ui.print("Flow: ");
+    ui.print(pumpFlow[p]);
+    ui.setCursor(0,5);
+    ui.print("Time: ");
+    ui.print(pumpTimesLength[p]);
+    
     /*    DOPLN VYPISOVANIE UDAJOV PRE 1 PUMPU : cas,smer.., NAPATIE !!!!  */
     //ui.print("\n");
     //ui.print(pumpTimesStart[p]);
@@ -190,7 +206,7 @@ char handleKey(char c){
         case 1:  return 7; break;
         case 2:  return 8; break;
         case 3:  return 9; break;
-        case 4:  break;
+        case 4:  return KEY_CHPARAM; break;
         case 5:  return 4; break;
         case 6:  return 5; break;
         case 7:  return 6; break;
@@ -365,7 +381,7 @@ void loop()
         //vypis jednej konkretnej pumpy sa aktualizuje raz za 3s
         if ((currentTime / 1000) >= ((savedTime / 1000) + 3)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
             savedTime = currentTime;
-            pumpDetail(m-1, tempMode, tempTimeStart, tempTimeLength);    // -1 lebo pumpy su cislovane v poliach od 0, aby boli spojené s poliami, lebo fungujú od 0
+            pumpDetail(m-1);    // -1 lebo pumpy su cislovane v poliach od 0, aby boli spojené s poliami, lebo fungujú od 0
         }
     }
 
@@ -443,4 +459,5 @@ void loop()
             
         }
     }
-}
+
+
