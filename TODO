@@ -3,3 +3,11 @@ To DO:
   -používané príkazy dať do funkcií
   -v HOME dynamicky vypisovať stlačené klavesy
   -pre vypis 1 čerpadla zistiť čo vypisovať,+ pripísať čo sa má vypisovať.
+
+//            Konzultácia - pridaj
+// riadit spustenie Start - tlacidlo 
+// VYPIS vo formate HH:MM:SS !!
+// toto je submenu čo je hotove, lubovolne menu s lubovolnou štrukturou,
+// dat pumpy do cyklu, ze vsetky naraz spustí - to iste nastavenie pre vsetky - cize: Nastavit pre vsetky? - Ano/Nie   ( DOROBIT MENU)
+// opakovanie ceprania pre 1 cerpadlo - nadavkuj objem- pockaj - po zadanom case znova spusti ten isty cyklus (opakuj) - kazdy den / hodinu / kazdych 10min
+// pri stlaceni cisla cerpania preprusit MOD1 a vypisat zadane cislo (cerpadla) - vypis toho čo sa prave stlača
