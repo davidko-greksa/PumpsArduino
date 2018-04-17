@@ -14,6 +14,7 @@ BV4612 ui(0x35);
 #define     KEY_CHPARAM     123     //Tlacidlo, CH - change PARAM-parameters, pre MODE (mod 1 zo 4), a DIR - direction, rotujuce 4 hodnoty dokola
 #define     KEY_SETTINGS    122      //Tlacidlo pre nastavenie hl. hodnot, -poč. cerpadiel, kontrast, vyber cerpadla
 #define     UNUSED_CELL     -1      // -1 je lebo to nie je validna hodnta, nikdz nic nebude mat hodnotu -1 s ktorou by sme pracovali (s 0 praciujeme)
+#define     PUMPS_PER_DISPLEJ 9       //Hovori o tom kolko je mozne vypisat pump na obrazovku pre 1 vypis
 
 
 
@@ -123,9 +124,12 @@ void vypisPumpu(uint8_t p) {
     if(p % 3 == 1 ) col= 44;
     if(p % 3 == 2 ) col= 87;
     
-    if(p == 0 || p == 1 || p == 2 || p == 9 || p == 10 || p == 11 ) row = 0;
-    if(p == 3 || p == 4 || p == 5 || p == 12 || p == 13 || p == 14 ) row = 3;
-    if(p == 6 || p == 7 || p == 8 || p == 15 || p == 16 || p == 17 ) row = 6;
+    if(p == 0 || p == 1 || p == 2 || p == 9 || p == 10 || p == 11 || p == 18 || p == 19 || p == 20 || p == 27 || p == 28 ||
+       p == 29 || p == 36 || p == 37 || p == 38 || p == 45 || p == 46 || p == 47 || p == 54 || p == 55 || p == 56 || p == 63) row = 0;
+    if(p == 3 || p == 4 || p == 5 || p == 12 || p == 13 || p == 14 || p == 21 || p == 22 || p == 23 || p == 30 || p == 31 ||
+       p == 32 || p == 39 || p == 40 || p == 41 || p == 48 || p == 49 || p == 50 || p == 57 || p == 58 || p == 59)            row = 3;
+    if(p == 6 || p == 7 || p == 8 || p == 15 || p == 16 || p == 17 || p == 24 || p == 25 || p == 26 || p == 33 || p == 34 ||
+       p == 35 || p == 42 || p == 43 || p == 44 || p == 51 || p == 52 || p == 53 || p == 60 || p == 61 || p == 62)            row = 6;
   
     ui.setCursor(col, row);
     ui.print(pumpPrintBuf);
@@ -318,21 +322,16 @@ void zobrazenie() {
             delay(50);                                                                        //  DELAY!!!
         }
     }
-
-    int c;   
-    switch (m){        
-        case 0:   // Obrazovka 1 -> cerpadla 1 - 9 (indexy 0-8)
-            currentTime = millis();
-            if (currentTime >= (savedTime + 100)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
-                savedTime = currentTime;
-                for (char i = 0; i < ((pocetPump < 9) ? pocetPump : 9); i++)      //ak nie su {} tak berie iba nasledujuci prikaz
-                    vypisPumpu(i);
-            }
-            break;
-        case -1:  // Obrazovka 2 -> cerpadla 10-18 (indexy 9-17)
-            for(char i = 9; i < pocetPump; i++)      //ak nie su {} tak berie iba nasledujuci prikaz
-                vypisPumpu(i);
-        default: break;
+     
+    currentTime = millis();
+    if (currentTime >= (savedTime + 100)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
+        savedTime = currentTime;
+        char z = -1 * PUMPS_PER_DISPLEJ * m;    // priradenie indexu prvej pumpy pre vypis v danom mode "m" (napr. mod -1 vrati 9, mod -2 vrati 18 atd
+        //Vypocet zobrazenia spravnej pumpy,  for( odkial, od ktorej pumpy vypisujem ; pokial vypisujem, po dalsich 9 pump; krok)
+        for (char i = z ; i < (pocetPump - z < PUMPS_PER_DISPLEJ ? pocetPump : z + PUMPS_PER_DISPLEJ) ; i++)      //ak nie su {} tak berie iba nasledujuci prikaz
+            vypisPumpu(i);
+        //Ak je pocet pump nasobku 9, vypisu sa presne od najnizsieho indexu "z" pre dane zobrazenie az po najvyssi kt. sa vyrata "z + PUMPS_PER_DISPLEJ" 
+        //Inak vypisuje postupne po 9 cerpadiel, ale na posledny vypis sa vypisu len ostavajuce pumpy po deleni 9, resp. "pocetPump - z"
     }
 }
 
@@ -364,7 +363,9 @@ void setup() {
     Rvyprazdni[0]=0xf1; Rvyprazdni[1]=0xc2; Rvyprazdni[2]=0xa4; Rvyprazdni[3]=0x98;
     Lvyprazdni[0]=0x19; Lvyprazdni[1]=0x25; Lvyprazdni[2]=0x43; Lvyprazdni[3]=0x8f;
     ciara[0]=0xff;
-  
+
+    //ui.EEwrite(32,18);
+    pocetPump = ui.EEread(32);
     //Inicializacia poli - osetrenie proti vypisu odpadu pred prvym spustenim
     for (uint8_t i = 0; i < pocetPump; i++) {  
         pumpModes[i] = 0;
@@ -380,9 +381,7 @@ void setup() {
     kbuf = UNUSED_CELL;
     savedTime = 0;  // cas ku ktoremu porovnavam, loop stale prebieha, referencny kt. sa porovna s currentTime
     p_choice = 4; // 4, aby po 1. stlaceni bolo 1 ciže Mode (rotovanie 0-4 => % 5 a +1)
-    //ui.EEwrite(32,18);
-    pocetPump = ui.EEread(32);
-  
+
     zobrazenie();
 };
 
@@ -391,7 +390,7 @@ void loop() {
     currentTime = millis();   //aktualny cas
     
     //1. Uroven m (m = 0 / -1) - ZOBRAZENIE 9+9 čerp. ---------
-    if (m == 0 || m == -1) { 
+    if (m <= 0 && m > -32) {      //vyratava pocet zobrazovacich obrazoviek, pocet moze byt od 0 po 31
 
         //handler zmeny modu
         char k;   
@@ -424,7 +423,7 @@ void loop() {
                 kbuf = UNUSED_CELL;
             }
             if(k == KEY_SETTINGS){
-                m = -2;
+                m = -32;
                 kbuf = UNUSED_CELL;
                 tempChoice = 0;
                 tempKontrast = kontrast;
@@ -436,20 +435,26 @@ void loop() {
         //Porovnanie časov namiesto funkcie Delay
         if ((currentTime / 1000) >= ((savedTime / 1000) + PREBLIK)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
             savedTime = currentTime;  //aktualny cas sa stava novym referencnym po kazdych 6s
-            if (m == 0) {     //detekuje sa zobrazenie 1.vypisu, zobrazí druhych 9 cerpadiel
-                m = -1;
+
+            char pocetDisplejov = (pocetPump % PUMPS_PER_DISPLEJ == 0 ? pocetPump / PUMPS_PER_DISPLEJ : (pocetPump / PUMPS_PER_DISPLEJ) +1);     //Kolko obrazoviek je potrebnych na vypis vsetkych pump
+            
+ //           if (m == 0) {     //detekuje sa zobrazenie 1.vypisu, zobrazí druhych 9 cerpadiel
+//                m = -1;
+//                ui.clrBuf();
+//                ui.clear();
+//                zobrazenie();    // zobrazujeme až tu, aby vypis prebiehal az kazdych PREBLIK sekund, cize stiha vypisovat
+//            } else if (m == -1) {    //ak je zobrazenych druhych 9 cerpadiel vypis prve
+//                m = 0;
+//                ui.clrBuf();
+//                ui.clear();
+//                zobrazenie();    // zobrazujeme až tu, aby vypis prebiehal az kazdych PREBLIK sekund, cize stiha vypisovat
+//            } else {          //po stlaceni klavesy -handler- vycisti buffery, konci zo zobrazovanim a ide do modu jedneho cerpadla alebo zadavania casov
+
+                m = (m - 1) % pocetDisplejov;   // vyrata sa aktualny mod podla poctu cerpadiel
                 ui.clrBuf();
                 ui.clear();
-                zobrazenie();    // zobrazujeme až tu, aby vypis prebiehal az kazdych PREBLIK sekund, cize stiha vypisovat
-            } else if (m == -1) {    //ak je zobrazenych druhych 9 cerpadiel vypis prve
-                m = 0;
-                ui.clrBuf();
-                ui.clear();
-                zobrazenie();    // zobrazujeme až tu, aby vypis prebiehal az kazdych PREBLIK sekund, cize stiha vypisovat
-            } else {          //po stlaceni klavesy -handler- vycisti buffery, konci zo zobrazovanim a ide do modu jedneho cerpadla alebo zadavania casov
-                ui.clrBuf();
-                ui.clear();
-            }
+                zobrazenie();
+ //           }
         }
     }
   
@@ -615,7 +620,7 @@ void loop() {
         }
           
     }
-    if(m == -2){
+    if(m == -32){
         
          settings();
          
@@ -652,4 +657,3 @@ void loop() {
  * -zadanie poctu cerpadiel
  EEPROM 
  */
- 
