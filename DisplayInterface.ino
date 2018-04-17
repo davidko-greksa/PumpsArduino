@@ -5,28 +5,29 @@
 // 7 bit adddress is used
 BV4612 ui(0x35);
 
-#define     PREBLIK         6       //Makro pre nastavenie casu prebliku v sekundach
-#define     MAX_PUMPS       64      //Pocet pump - maximalny az 64!!
-#define     KEY_NOK         127     //kovertovanie tlacidiel
-#define     KEY_OK          126
-#define     KEY_CHMOD       125     //Tlacidlo na zmenu modu čerpania
-#define     KEY_CHDIR       124     //Tlačidlo na zmenu smeru čerpania
-#define     KEY_CHPARAM     123     //Tlacidlo, CH - change PARAM-parameters, pre MODE (mod 1 zo 4), a DIR - direction, rotujuce 4 hodnoty dokola
-#define     KEY_SETTINGS    122      //Tlacidlo pre nastavenie hl. hodnot, -poč. cerpadiel, kontrast, vyber cerpadla
-#define     UNUSED_CELL     -1      // -1 je lebo to nie je validna hodnta, nikdz nic nebude mat hodnotu -1 s ktorou by sme pracovali (s 0 praciujeme)
-#define     PUMPS_PER_DISPLEJ 9       //Hovori o tom kolko je mozne vypisat pump na obrazovku pre 1 vypis
+//Konstanty
+#define     PREBLIK             6       //Makro pre nastavenie casu prebliku v sekundach
+#define     MAX_PUMPS           64      //Pocet pump - maximalny az 64!!
+#define     PUMPS_PER_DISPLAY   9       //Hovori o tom kolko je mozne vypisat pump na obrazovku pre 1 vypis
+#define     UNUSED_CELL         -1      // -1 je lebo to nie je validna hodnta, nikdz nic nebude mat hodnotu -1 s ktorou by sme pracovali (s 0 praciujeme)
+
+//Klavesove kody
+#define     KEY_NOK             127     //kod pre tlacidlo - potvrdenie
+#define     KEY_OK              126     //Kod pre tlacidlo - zamietnutie
+#define     KEY_CHPARAM         123     //Tlacidlo, CH - change PARAM-parameters, pre MODE (mod 1 zo 4), a DIR - direction, rotujuce 4 hodnoty dokola, volba v settings
+#define     KEY_SETTINGS        122     //Tlacidlo pre nastavenie hl. hodnot, -poč. cerpadiel, kontrast, vyber cerpadla
 
 
 
-//globalne premenne pre vsetky funkcie
-int16_t m;  // 0 = display1, -1 = display2,  1 - 17 = jedno cerpadlo vypisane,
-            //X01 - X17 kde X<1,5> určuje zadavany parameter Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
-long kbuf;  //buffer pre vytváranie viacciferneho čísla
-char p_choice;  // premenná na uchovanie hodnoty práve zadavaneho parametra Mod=1 atd
-uint8_t chparMask; //premenna ktora jednotlivymi bitmi urcuje co sme zmenili v 3. mode menu (to sa bude ukladat)
-unsigned long savedTime, currentTime;
-uint8_t kontrast;
-uint8_t pocetPump;
+//globalne premenne pre vsetky funkcie                            
+int16_t m;                  // (0 - -7) = home,  1 - 64 = jedno cerpadlo vypisane, 101 - 564 (zmena nastaveni cerpadiel)
+long kbuf;                  //buffer pre vytváranie viacciferneho čísla
+char p_choice;              //premenná na uchovanie hodnoty práve zadavaneho parametra Mod=1 atd
+uint8_t chparMask;          //premenna ktora jednotlivymi bitmi urcuje co sme zmenili v 3. mode menu (to sa bude ukladat)
+uint8_t kontrast;           //uklada kontrast (da sa zmenit v settings)
+uint8_t pocetPump;          //uklada pocet pump, ktore zariadenie aktualne obsluhuje (da sa zmenit v settings, zmeny sa prejavia az po resete)
+unsigned long currentTime;  //sluzi na makky delay
+unsigned long savedTime;    //sluzi na makky delay
 
 // dočasné premenné = temporary, naše pracovné ktoré vidíme dynamicky sa meniť pri výpise 1 čerpadla, po výstupe z funkcie sa zapisuju 
 // do hlavných/východzích: pumpModes[MAX_PUMPS]; pumpTimesStart[MAX_PUMPS]; pumpTimesLength[MAX_PUMPS]
@@ -40,8 +41,9 @@ uint16_t tempTimeStart;
 uint16_t tempTimeLength;
 uint8_t tempPocetPump;
 uint8_t tempKontrast;
-uint8_t tempChoice; //premenna na definovanie co sa bude zadavat, ci sme v nastaveni kontrastu alebo poctu pump
+uint8_t tempChoice;         //premenna na definovanie co sa bude zadavat, ci sme v nastaveni kontrastu alebo poctu pump
 
+//polia pre grafiku
 uint8_t Lnapln[4];
 uint8_t Rnapln[4];
 uint8_t Lvyprazdni[4];
@@ -60,7 +62,6 @@ uint8_t ciara[1];
 //1 - Lnapln
 //2 - Rvyprazdni
 //3 - Rnapln 
-
 
 //globalne pole - obsahuje aktualnu hodnotu módov pump (1 zo 4 možných CD,VD..). V kazdom chlieviku jedna pumpa.
 uint8_t pumpModes[MAX_PUMPS];
@@ -120,10 +121,12 @@ void vypisPumpu(uint8_t p) {
     // Nastavenie konretnej polohy vypisu pre napr "P10 mod"
     char row,col;
 
+    //stlpec
     if(p % 3 == 0 ) col= 0;
     if(p % 3 == 1 ) col= 44;
     if(p % 3 == 2 ) col= 87;
     
+    //riadok
     if(p == 0 || p == 1 || p == 2 || p == 9 || p == 10 || p == 11 || p == 18 || p == 19 || p == 20 || p == 27 || p == 28 ||
        p == 29 || p == 36 || p == 37 || p == 38 || p == 45 || p == 46 || p == 47 || p == 54 || p == 55 || p == 56 || p == 63) row = 0;
     if(p == 3 || p == 4 || p == 5 || p == 12 || p == 13 || p == 14 || p == 21 || p == 22 || p == 23 || p == 30 || p == 31 ||
@@ -131,10 +134,12 @@ void vypisPumpu(uint8_t p) {
     if(p == 6 || p == 7 || p == 8 || p == 15 || p == 16 || p == 17 || p == 24 || p == 25 || p == 26 || p == 33 || p == 34 ||
        p == 35 || p == 42 || p == 43 || p == 44 || p == 51 || p == 52 || p == 53 || p == 60 || p == 61 || p == 62)            row = 6;
   
+    //vypis pumpy a modu
     ui.setCursor(col, row);
     ui.print(pumpPrintBuf);
     delay(10);
 
+    //vypis smeru
     switch (pumpDir[p]) {
         case 0:
             ui.dataLine(Lvyprazdni, row, col + 36, 4);
@@ -326,11 +331,11 @@ void zobrazenie() {
     currentTime = millis();
     if (currentTime >= (savedTime + 100)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
         savedTime = currentTime;
-        char z = -1 * PUMPS_PER_DISPLEJ * m;    // priradenie indexu prvej pumpy pre vypis v danom mode "m" (napr. mod -1 vrati 9, mod -2 vrati 18 atd
+        char z = -1 * PUMPS_PER_DISPLAY * m;    // priradenie indexu prvej pumpy pre vypis v danom mode "m" (napr. mod -1 vrati 9, mod -2 vrati 18 atd
         //Vypocet zobrazenia spravnej pumpy,  for( odkial, od ktorej pumpy vypisujem ; pokial vypisujem, po dalsich 9 pump; krok)
-        for (char i = z ; i < (pocetPump - z < PUMPS_PER_DISPLEJ ? pocetPump : z + PUMPS_PER_DISPLEJ) ; i++)      //ak nie su {} tak berie iba nasledujuci prikaz
+        for (char i = z ; i < (pocetPump - z < PUMPS_PER_DISPLAY ? pocetPump : z + PUMPS_PER_DISPLAY); i++)      //ak nie su {} tak berie iba nasledujuci prikaz
             vypisPumpu(i);
-        //Ak je pocet pump nasobku 9, vypisu sa presne od najnizsieho indexu "z" pre dane zobrazenie az po najvyssi kt. sa vyrata "z + PUMPS_PER_DISPLEJ" 
+        //Ak je pocet pump nasobku 9, vypisu sa presne od najnizsieho indexu "z" pre dane zobrazenie az po najvyssi kt. sa vyrata "z + PUMPS_PER_DISPLAY" 
         //Inak vypisuje postupne po 9 cerpadiel, ale na posledny vypis sa vypisu len ostavajuce pumpy po deleni 9, resp. "pocetPump - z"
     }
 }
@@ -435,26 +440,11 @@ void loop() {
         //Porovnanie časov namiesto funkcie Delay
         if ((currentTime / 1000) >= ((savedTime / 1000) + PREBLIK)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
             savedTime = currentTime;  //aktualny cas sa stava novym referencnym po kazdych 6s
-
-            char pocetDisplejov = (pocetPump % PUMPS_PER_DISPLEJ == 0 ? pocetPump / PUMPS_PER_DISPLEJ : (pocetPump / PUMPS_PER_DISPLEJ) +1);     //Kolko obrazoviek je potrebnych na vypis vsetkych pump
-            
- //           if (m == 0) {     //detekuje sa zobrazenie 1.vypisu, zobrazí druhych 9 cerpadiel
-//                m = -1;
-//                ui.clrBuf();
-//                ui.clear();
-//                zobrazenie();    // zobrazujeme až tu, aby vypis prebiehal az kazdych PREBLIK sekund, cize stiha vypisovat
-//            } else if (m == -1) {    //ak je zobrazenych druhych 9 cerpadiel vypis prve
-//                m = 0;
-//                ui.clrBuf();
-//                ui.clear();
-//                zobrazenie();    // zobrazujeme až tu, aby vypis prebiehal az kazdych PREBLIK sekund, cize stiha vypisovat
-//            } else {          //po stlaceni klavesy -handler- vycisti buffery, konci zo zobrazovanim a ide do modu jedneho cerpadla alebo zadavania casov
-
-                m = (m - 1) % pocetDisplejov;   // vyrata sa aktualny mod podla poctu cerpadiel
-                ui.clrBuf();
-                ui.clear();
-                zobrazenie();
- //           }
+            char pocetDisplejov = (pocetPump % PUMPS_PER_DISPLAY == 0 ? (pocetPump / PUMPS_PER_DISPLAY) : ((pocetPump / PUMPS_PER_DISPLAY) + 1));     //Kolko obrazoviek je potrebnych na vypis vsetkych pump
+            m = (m - 1) % pocetDisplejov;   // aktualizuj mod
+            ui.clrBuf();
+            ui.clear();
+            zobrazenie(); //zobraz pumpy podla aktualneho modu
         }
     }
   
@@ -462,8 +452,7 @@ void loop() {
     if (m >= 1 && m <= pocetPump) {
         currentTime = millis();
         char k;
-        
-        
+                
         //KEY_NOK a po zadani aj KEY_OK zabezpecuje skok do modu 0 - zakladne zobrazenie, pri dalsom stlaceni klavesnice    !!!
         // Podmienka pre rozdavanie uloh, podla toho co bolo stlacene
         if (ui.keysBuf()) {  
@@ -585,46 +574,49 @@ void loop() {
             ui.setCursor(0,7);
             if(kbuf == -1)
                 ui.print("invalid");
-            else{ui.print(kbuf);}
+            else
+                ui.print(kbuf);
 
             switch (tchoice){
                 case 1: 
-                        ui.setCursor(0,0);
-                        ui.print("Mode");
-                        ui.setCursor(0,1);
-                        ui.print("0 = CD, 1 = VD");
-                        ui.setCursor(0,2);
-                        ui.print("2 =  D, 3 = CF"); break;
+                    ui.setCursor(0,0);
+                    ui.print("Mode");
+                    ui.setCursor(0,1);
+                    ui.print("0 = CD, 1 = VD");
+                    ui.setCursor(0,2);
+                    ui.print("2 =  D, 3 = CF");
+                    break;
                 case 2:
-                        ui.setCursor(0,0);
-                        ui.print("Direction");
-                        ui.setCursor(0,1);
-                        ui.print("0 = Lvyprazdni");
-                        ui.setCursor(0,2);
-                        ui.print("1 = Lnapln");
-                        ui.setCursor(0,3);
-                        ui.print("2 = Rvyprazdni");
-                        ui.setCursor(0,4);
-                        ui.print("3 = Rnapln"); break;
+                    ui.setCursor(0,0);
+                    ui.print("Direction");
+                    ui.setCursor(0,1);
+                    ui.print("0 = Lvyprazdni");
+                    ui.setCursor(0,2);
+                    ui.print("1 = Lnapln");
+                    ui.setCursor(0,3);
+                    ui.print("2 = Rvyprazdni");
+                    ui.setCursor(0,4);
+                    ui.print("3 = Rnapln");
+                    break;
                 case 3:
-                        ui.setCursor(0,0);
-                        ui.print("Flow [ml / min]"); break;      // TO DO - dopis maximalny
+                    ui.setCursor(0,0);
+                    ui.print("Flow [ml / min]");
+                    break;      // TO DO - dopis maximalny
                 case 4:
-                        ui.setCursor(0,0);
-                        ui.print("Volume [ ml ]"); break;
+                    ui.setCursor(0,0);
+                    ui.print("Volume [ ml ]");
+                    break;
                 case 5:
-                        ui.setCursor(0,0);
-                        ui.print("Time [ HH:MM:SS ]"); break;       
+                    ui.setCursor(0,0);
+                    ui.print("Time [ HH:MM:SS ]");
+                    break;       
             }
 
         }
           
     }
-    if(m == -32){
-        
-         settings();
-         
-            
+    if(m == -32){        
+         settings();       
     }
     
     //Tu je aktualizacia časov - kolko sa už prečerpalo - dekrementacia napr. každú sekundu.
