@@ -6,7 +6,7 @@
 BV4612 ui(0x35);
 
 #define     PREBLIK         6       //Makro pre nastavenie casu prebliku v sekundach
-#define     POCET_PUMP      64      //Pocet pump - maximalny az 64!!
+#define     MAX_PUMPS       64      //Pocet pump - maximalny az 64!!
 #define     KEY_NOK         127     //kovertovanie tlacidiel
 #define     KEY_OK          126
 #define     KEY_CHMOD       125     //Tlacidlo na zmenu modu čerpania
@@ -28,7 +28,7 @@ uint8_t kontrast;
 uint8_t pocetPump;
 
 // dočasné premenné = temporary, naše pracovné ktoré vidíme dynamicky sa meniť pri výpise 1 čerpadla, po výstupe z funkcie sa zapisuju 
-// do hlavných/východzích: pumpModes[POCET_PUMP]; pumpTimesStart[POCET_PUMP]; pumpTimesLength[POCET_PUMP]
+// do hlavných/východzích: pumpModes[MAX_PUMPS]; pumpTimesStart[MAX_PUMPS]; pumpTimesLength[MAX_PUMPS]
 //Globálne prem. sa prepíšu podľa pracovných (temp.) až po stlačení tlačidla KEY_OK
 
 uint8_t tempMode;
@@ -62,22 +62,22 @@ uint8_t ciara[1];
 
 
 //globalne pole - obsahuje aktualnu hodnotu módov pump (1 zo 4 možných CD,VD..). V kazdom chlieviku jedna pumpa.
-uint8_t pumpModes[POCET_PUMP];
+uint8_t pumpModes[MAX_PUMPS];
 
 //globalne pole pre smery cerpania jednotlivych pump
-uint8_t pumpDir[POCET_PUMP];
+uint8_t pumpDir[MAX_PUMPS];
 
 //globalne pole pre casy spustenia cerpania jednotlivych pump - pociatocne casy
-uint16_t pumpTimesStart[POCET_PUMP];
+uint16_t pumpTimesStart[MAX_PUMPS];
 
 //pole na zadavané časy čerpania z klavesnice - input
-uint16_t pumpTimesLength[POCET_PUMP];
+uint16_t pumpTimesLength[MAX_PUMPS];
 
 //pole na objemy-volume púmp
-uint16_t pumpVolumes[POCET_PUMP];
+uint16_t pumpVolumes[MAX_PUMPS];
 
 //pole na prietoky-flow púmp
-uint8_t pumpFlow[POCET_PUMP];
+uint8_t pumpFlow[MAX_PUMPS];
 
 //Buffer, do ktoreho natlacime nazov (cislo) pumpy a akutalny mod
 char pumpPrintBuf[6];
@@ -197,7 +197,7 @@ void pumpDetail(uint8_t p) {
     ui.print("Time: ");
     if(pumpTimesLength[p] != 0){
         ui.print(pumpTimesLength[p] - ((millis() / 1000) - pumpTimesStart[p]));
-    }else{
+    } else {
         ui.print(0);  
     }
 }
@@ -232,75 +232,75 @@ char handleKey(char c){
         case 13: return KEY_NOK; break;
         case 14: return 0; break;
         case 15: return KEY_OK; break;
-        case 16:  break;
+        case 16: break;
     } 
     return 0; 
 }
 
 //Funkcia na zadavanie kontrastu, poc.cerp.
 void settings(){
-  char k;
-        if(ui.keysBuf()) {      //po staceni klavesy
-            k = handleKey(ui.key());
-            ui.clrBuf();
-            if(k == KEY_OK){
-                if(kbuf == UNUSED_CELL){
-                            kontrast = tempKontrast;
-                            ui.contrast(kontrast);
-                            if (tempPocetPump <= POCET_PUMP) ui.EEwrite(32,tempPocetPump);   //(adresa kam zapisujeme,hodnota), osetrenie validnej hodnoty (maximalne 64 pump)
-                            m = -1;
-                } else { //ak sme nieco uz zapisali
-                    switch (tempChoice){
-                        case 0: 
-                            tempKontrast = kbuf;
-                            break;
-                        case 1:
-                            tempPocetPump = kbuf;
-                            break;
-                    }
-                    kbuf = UNUSED_CELL;
+    char k;
+    if(ui.keysBuf()) {      //po staceni klavesy
+        k = handleKey(ui.key());
+        ui.clrBuf();
+        if(k == KEY_OK){
+            if(kbuf == UNUSED_CELL){
+                kontrast = tempKontrast;
+                ui.contrast(kontrast);
+                if (tempPocetPump <= MAX_PUMPS) ui.EEwrite(32,tempPocetPump);   //(adresa kam zapisujeme,hodnota), osetrenie validnej hodnoty (maximalne 64 pump)
+                m = -1;
+            } else { //ak sme nieco uz zapisali
+                switch (tempChoice){
+                    case 0: 
+                        tempKontrast = kbuf;
+                        break;
+                    case 1:
+                        tempPocetPump = kbuf;
+                        break;
                 }
+                kbuf = UNUSED_CELL;
             }
-            if(k == KEY_NOK){
-                if(kbuf == UNUSED_CELL){
-                    m = -1;
-                }else{ //ak sme nieco uz zapisali
-                    kbuf = UNUSED_CELL; 
-                }
+        }
+        if(k == KEY_NOK){
+            if(kbuf == UNUSED_CELL){
+                m = -1;
+            } else { //ak sme nieco uz zapisali
+                kbuf = UNUSED_CELL; 
             }
-            if(k >= 0 && k <= 9 && kbuf != UNUSED_CELL){      
-                kbuf = (kbuf * 10) + k;
-            }
-            if(k >= 0 && k <= 9 && kbuf == UNUSED_CELL){
-                kbuf = k;
-            }
-            if(k == KEY_CHPARAM){
-                tempChoice = (tempChoice +1) % 2;       // % 2 lebo iba 2 hodnoty nastavujem , naskor + a potom % aby som dostaval hodnoty 0 a 1
-            }
-         }
-  ui.clear();
-  ui.print("settings");
-  ui.setCursor(0,1);
-  if (tempChoice == 0) ui.print("*");
-  ui.print("Kontrast: ");
-  if(tempChoice != 0 || (kbuf == UNUSED_CELL && tempChoice == 0)){
-    ui.print(tempKontrast);
-  }else{
-    ui.print(kbuf);  
-  }
-  ui.setCursor(0,2);
-  if (tempChoice == 1) ui.print("*");
-  ui.print("Pocet pump:");
-  if(tempChoice != 1 || (kbuf == UNUSED_CELL && tempChoice == 1)){
-      ui.print(tempPocetPump);
-  }else{
-      ui.print(kbuf);
-  }
-  ui.setCursor(0,3);
-  ui.print(tempChoice);
-  ui.setCursor(0,4);
-  ui.print(kbuf);
-  delay(300);
+        }
+        if(k >= 0 && k <= 9 && kbuf != UNUSED_CELL){      
+            kbuf = (kbuf * 10) + k;
+        }
+        if(k >= 0 && k <= 9 && kbuf == UNUSED_CELL){
+            kbuf = k;
+        }
+        if(k == KEY_CHPARAM){
+            tempChoice = (tempChoice +1) % 2;       // % 2 lebo iba 2 hodnoty nastavujem , naskor + a potom % aby som dostaval hodnoty 0 a 1
+        }
+    }
+    ui.clear();
+    ui.print("settings");
+    ui.setCursor(0,1);
+    if (tempChoice == 0) ui.print("*");
+    ui.print("Kontrast: ");
+    if(tempChoice != 0 || (kbuf == UNUSED_CELL && tempChoice == 0)){
+        ui.print(tempKontrast);
+    } else {
+        ui.print(kbuf);  
+    }
+    ui.setCursor(0,2);
+    if (tempChoice == 1) ui.print("*");
+    ui.print("Pocet pump:");
+    if(tempChoice != 1 || (kbuf == UNUSED_CELL && tempChoice == 1)){
+        ui.print(tempPocetPump);
+    } else {
+        ui.print(kbuf);
+    }
+    ui.setCursor(0,3);
+    ui.print(tempChoice);
+    ui.setCursor(0,4);
+    ui.print(kbuf);
+    delay(300);
 }
 
 //Vypis celeho HOME - vychodzi zobrazenie
@@ -339,16 +339,15 @@ void zobrazenie() {
 // aktualizuje hodnoty časov pumpTimeLength v poliach pre každe čerpadlo, (a tiez aktualizuje pumpValues.)
 //porovnavame ci sme docerpali, ak hej vyplne sa pumpa a pumpTimeLength sa nastavi na 0 
 void updateValues(){
-  uint8_t i;  //cislo pumpy
-  uint32_t timeDif;   // difference - rozdiel
-  for(i = 0; i < pocetPump; i++){
-      timeDif =  (millis() / 1000 ) - pumpTimesStart[i];
-      if(timeDif >= pumpTimesLength[i]){
-         pumpTimesLength[i] = 0;
-         pumpTimesStart[i] = 0; 
-      }
-  }
-  
+    uint8_t i;  //cislo pumpy
+    uint32_t timeDif;   // difference - rozdiel
+    for(i = 0; i < pocetPump; i++){
+        timeDif =  (millis() / 1000 ) - pumpTimesStart[i];
+        if(timeDif >= pumpTimesLength[i]){
+            pumpTimesLength[i] = 0;
+            pumpTimesStart[i] = 0; 
+        }
+    }
 }
 
 void setup() {
@@ -442,7 +441,7 @@ void loop() {
                 ui.clrBuf();
                 ui.clear();
                 zobrazenie();    // zobrazujeme až tu, aby vypis prebiehal az kazdych PREBLIK sekund, cize stiha vypisovat
-            } else  if (m == -1) {    //ak je zobrazenych druhych 9 cerpadiel vypis prve
+            } else if (m == -1) {    //ak je zobrazenych druhych 9 cerpadiel vypis prve
                 m = 0;
                 ui.clrBuf();
                 ui.clear();
@@ -469,7 +468,7 @@ void loop() {
             if(k == KEY_CHPARAM) {
                 p_choice = (p_choice % 5) + 1;  //%5 -> ostaneme v hraniciach 0 az 4 pre zadavanie, posledna +1 -> ideme v modoch uz 1 az 5
                 m = m + (100 * p_choice);
-              //  continue;    // continue ???
+                //  continue;    // continue ???
             }
             if(k == KEY_NOK) {
                 m = 0;
@@ -478,8 +477,8 @@ void loop() {
             }
             if(k == KEY_OK) {
                 /*pumpModes[m-1] = tempMode;    // m-1 pumpa (real čislovanie od 1, v programe od 0) sa prepíse hlavný mod podla dočasneho
-                  pumpTimesStart[m-1] = tempTimeStart;
-                  pumpTimesLength[m-1] = tempTimeLength;*/ //riesime v 3.urovni
+                    pumpTimesStart[m-1] = tempTimeStart;
+                    pumpTimesLength[m-1] = tempTimeLength;*/ //riesime v 3.urovni
                 m = 0;
                 ui.clear();
                 zobrazenie();
