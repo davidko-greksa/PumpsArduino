@@ -125,30 +125,11 @@ void vypisPumpu(uint8_t p) {
     if(p % PUMPS_PER_DISPLAY == 0 || p % PUMPS_PER_DISPLAY == 3 || p % PUMPS_PER_DISPLAY == 6 ) col= 0;
     if(p % PUMPS_PER_DISPLAY == 1 || p % PUMPS_PER_DISPLAY == 4 || p % PUMPS_PER_DISPLAY == 7 ) col= 44;
     if(p % PUMPS_PER_DISPLAY == 2 || p % PUMPS_PER_DISPLAY == 5)                                col= 87;
-    
     //riadok
-    // if(p == 0 || p == 1 || p == 2 || p == 9 || p == 10 || p == 11 || p == 18 || p == 19 || p == 20 || p == 27 || p == 28 || p == 29 || p == 36 || p == 37 || p == 38 || p == 45 || p == 46 || p == 47 || p == 54 || p == 55 || p == 56 || p == 63) row = 0;
-    // if(p == 3 || p == 4 || p == 5 || p == 12 || p == 13 || p == 14 || p == 21 || p == 22 || p == 23 || p == 30 || p == 31 || p == 32 || p == 39 || p == 40 || p == 41 || p == 48 || p == 49 || p == 50 || p == 57 || p == 58 || p == 59)            row = 3;
-    // if(p == 6 || p == 7 || p == 8 || p == 15 || p == 16 || p == 17 || p == 24 || p == 25 || p == 26 || p == 33 || p == 34 || p == 35 || p == 42 || p == 43 || p == 44 || p == 51 || p == 52 || p == 53 || p == 60 || p == 61 || p == 62)            row = 6
-    
     if (p % PUMPS_PER_DISPLAY == 0 || p % PUMPS_PER_DISPLAY == 1 || p % PUMPS_PER_DISPLAY == 2) row = 0;
     if (p % PUMPS_PER_DISPLAY == 3 || p % PUMPS_PER_DISPLAY == 4 || p % PUMPS_PER_DISPLAY == 5) row = 3;
     if (p % PUMPS_PER_DISPLAY == 6 || p % PUMPS_PER_DISPLAY == 7)                               row = 6;
     
-    // //prvy riadok
-    // if(p == 0  || p == 1  || p == 2  || p == 8  || p == 9  || p == 10 ||
-       // p == 16 || p == 17 || p == 18 || p == 24 || p == 25 || p == 26 ||
-       // p == 32 || p == 33 || p == 34 || p == 40 || p == 41 || p == 42 ||
-       // p == 48 || p == 49 || p == 50 || p == 56 || p == 57 || p == 58)   row = 0;
-    // //druhy riadok
-    // if(p == 3  || p == 4  || p == 5  || p == 11 || p == 12 || p == 13 ||
-       // p == 19 || p == 20 || p == 21 || p == 27 || p == 28 || p == 29 ||
-       // p == 35 || p == 36 || p == 37 || p == 43 || p == 44 || p == 45 ||
-       // p == 51 || p == 52 || p == 53 || p == 59 || p == 60 || p == 61)   row = 3;
-    // //treti riadok
-    // if(p == 6  || p == 7  || p == 14 || p == 15 || p == 22 || p == 23 ||
-       // p == 30 || p == 31 || p == 38 || p == 39 || p == 46 || p == 47 ||
-       // p == 54 || p == 55 || p == 62 || p == 63)                         row = 6;
   
     //vypis pumpy a modu
     ui.setCursor(col, row);
@@ -205,7 +186,7 @@ void pumpDetail(uint8_t p) {
     ui.clear();
     ui.setCursor(0,0);
     ui.print("pumpa: ");
-    ui.print(p);
+    ui.print(p+1);
     ui.setCursor(0,1);
     ui.print("Mod: ");
     ui.print(pumpModes[p]);
@@ -461,6 +442,10 @@ void loop() {
             ui.clrBuf();
             ui.clear();
             zobrazenie(); //zobraz pumpy podla aktualneho modu
+            if(kbuf != UNUSED_CELL){
+                ui.setCursor(87,6);
+                ui.print(kbuf);
+            }
         }
     }
   
