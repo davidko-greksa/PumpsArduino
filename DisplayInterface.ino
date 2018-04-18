@@ -38,7 +38,7 @@ uint8_t tempDir;
 uint16_t tempVol;
 uint8_t tempFlow;
 uint16_t tempTimeStart; 
-uint16_t tempTimeLength;
+unsigned long tempTimeLength;
 uint8_t tempPocetPump;
 uint8_t tempKontrast;
 uint8_t tempChoice;         //premenna na definovanie co sa bude zadavat, ci sme v nastaveni kontrastu alebo poctu pump
@@ -73,7 +73,7 @@ uint8_t pumpDir[MAX_PUMPS];
 uint16_t pumpTimesStart[MAX_PUMPS];
 
 //pole na zadavané časy čerpania z klavesnice - input
-uint16_t pumpTimesLength[MAX_PUMPS];
+unsigned long pumpTimesLength[MAX_PUMPS];
 
 //pole na objemy-volume púmp
 uint16_t pumpVolumes[MAX_PUMPS];
@@ -170,10 +170,9 @@ void vypisPumpu(uint8_t p) {
 
 
 //zoberie format HH:MM:SS a prevedie na cislo v sekundach
-uint16_t timeToSec(long t) {
-    if(t / 10000 >= 18) return 0;  // test ci je dobre cislo, ak nie vrati uint 0, lebo nevie ulozit take velke cislo - 18hodin (oreze MM:SS, preto 1:00:00 => 10000)
-    //uint16_t timeSec = 0;
-    long timeSec = 0;
+unsigned long timeToSec(unsigned long t) {
+    //if(t / 10000 >= 18) return 0;  // test ci je dobre cislo, ak nie vrati uint 0, lebo nevie ulozit take velke cislo - 18hodin (oreze MM:SS, preto 1:00:00 => 10000)
+    unsigned long timeSec = 0;
     timeSec += t % 100;             // sekundy 
     t = t / 100;                    // oseknutie sekund - poslednzch 2 cisel zo stringu cisel
     timeSec += (t % 100) * 60;      // minuty
