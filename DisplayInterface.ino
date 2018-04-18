@@ -172,13 +172,20 @@ void vypisPumpu(uint8_t p) {
 //zoberie format HH:MM:SS a prevedie na cislo v sekundach
 uint16_t timeToSec(long t) {
     if(t / 10000 >= 18) return 0;  // test ci je dobre cislo, ak nie vrati uint 0, lebo nevie ulozit take velke cislo - 18hodin (oreze MM:SS, preto 1:00:00 => 10000)
-    uint16_t timeSec = 0;
+    //uint16_t timeSec = 0;
+    long timeSec = 0;
     timeSec += t % 100;             // sekundy 
     t = t / 100;                    // oseknutie sekund - poslednzch 2 cisel zo stringu cisel
     timeSec += (t % 100) * 60;      // minuty
     t = t / 100;
     timeSec += (t % 100) * 3600;    // hodiny
     return timeSec;
+}
+
+//cislo v sekundach prevedie na format HH:MM:SS
+uint16_t timeToHHMMSS(long s){
+    long hhmmss = 0;
+    
 }
 
 //Výpis 1 vybranej pumpy s detailami
@@ -211,9 +218,9 @@ void pumpDetail(uint8_t p) {
 // Keyboard Layout:
 //
 // |---|---|---|---|
-// | 7 | 8 | 9 |CHP|
+// | 7 | 8 | 9 |SET|
 // |---|---|---|---|
-// | 4 | 5 | 6 |SET|
+// | 4 | 5 | 6 |CHP|
 // |---|---|---|---|
 // | 1 | 2 | 3 |   |
 // |---|---|---|---|
@@ -226,11 +233,11 @@ char handleKey(char c){
         case 1:  return 7; break;
         case 2:  return 8; break;
         case 3:  return 9; break;
-        case 4:  return KEY_CHPARAM; break;
+        case 4:  return KEY_SETTINGS; break;
         case 5:  return 4; break;
         case 6:  return 5; break;
         case 7:  return 6; break;
-        case 8:  return KEY_SETTINGS; break;
+        case 8:  return KEY_CHPARAM; break;
         case 9:  return 1; break;
         case 10: return 2; break;
         case 11: return 3; break;
@@ -285,7 +292,7 @@ void settings(){
         }
     }
     ui.clear();
-    ui.print("settings");
+    ui.print("Settings");
     ui.setCursor(0,1);
     if (tempChoice == 0) ui.print("*");
     ui.print("Kontrast: ");
@@ -302,9 +309,14 @@ void settings(){
     } else {
         ui.print(kbuf);
     }
+    delay(10);
     ui.setCursor(0,3);
-    ui.print(tempChoice);
+    ui.print("Zmena poc.pump");
     ui.setCursor(0,4);
+    ui.print(" => reset");
+    ui.setCursor(0,5);
+    ui.print(tempChoice);
+    ui.setCursor(0,6);
     ui.print(kbuf);
     delay(300);
 }
@@ -487,7 +499,7 @@ void loop() {
         }
     }
 
-    // 3.Uroven m - Výber co sa bude zadavat / nastavovat : Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
+    // 3.Uroven m - Výber co sa bude ZADAVAT / nastavovat : Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
     if(m > pocetPump) {
         char tchoice = m / 100;   // z čísla pumpy vydelením 100 ziskame CELOČÍSELNE v akom p_choice sa nachadzame ci Mode/Dir/Vol...
         //(neuvazuje sa obahovanie cisla pumpy napr 417 kde 17 je cislo pumpy) /tchoice - temporary choice
@@ -566,15 +578,21 @@ void loop() {
         if (currentTime >= (savedTime + 800)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
             savedTime = currentTime;
             ui.clear();
-            ui.setCursor(80,6);
+            ui.setCursor(80,7);
             ui.print(m);
             //ui.setCursor(60,5);
             //ui.print(chparMask);
             ui.setCursor(0,6);
             ui.print("input:");          
             ui.setCursor(0,7);
-            if(kbuf == -1)
-                ui.print("invalid");
+            if(kbuf == -1){
+                
+                if((tempMode || tempDir || tempVol || tempFlow || tempTimeLength) != 0){
+                    ui.print("acepted");     
+                }else{
+                    ui.print("invalid"); 
+                }
+            }   
             else
                 ui.print(kbuf);
 
@@ -586,37 +604,49 @@ void loop() {
                     ui.print("0 = CD, 1 = VD");
                     ui.setCursor(0,2);
                     ui.print("2 =  D, 3 = CF");
+                    ui.setCursor(80,6);
+                    ui.print(tempMode);
                     break;
                 case 2:
                     ui.setCursor(0,0);
                     ui.print("Direction");
                     ui.setCursor(0,1);
                     ui.print("0 = Lvyprazdni");
+                    delay(10);
                     ui.setCursor(0,2);
                     ui.print("1 = Lnapln");
                     ui.setCursor(0,3);
                     ui.print("2 = Rvyprazdni");
                     ui.setCursor(0,4);
                     ui.print("3 = Rnapln");
+                    ui.setCursor(80,6);
+                    ui.print(tempDir);
                     break;
                 case 3:
                     ui.setCursor(0,0);
-                    ui.print("Flow [ml / min]");
-                    break;      // TO DO - dopis maximalny
+                    ui.print("Volume [ ml ]");
+                    ui.setCursor(80,6);
+                    ui.print(tempVol);
+                    break;                   
                 case 4:
                     ui.setCursor(0,0);
-                    ui.print("Volume [ ml ]");
-                    break;
+                    ui.print("Flow [ml / min]");
+                    ui.setCursor(80,6);
+                    ui.print(tempFlow);
+                    break;      // TO DO - dopis maximalny
                 case 5:
                     ui.setCursor(0,0);
                     ui.print("Time [ HH:MM:SS ]");
+                    ui.setCursor(80,6);
+                    ui.print(tempTimeLength);
                     break;       
             }
 
         }
           
     }
-    if(m == -32){        
+    // SETTINGS 
+    if(m == -32){        //Zadavanie hlavnych parametrov - do setting sa da dostat len pi preblikavani vsetkych cerpadiel
          settings();       
     }
     
@@ -634,15 +664,16 @@ void loop() {
 
 
 //            Konzultácia - pridaj
-// riadit spustenie Start - tlacidlo 
-// VYPIS vo formate HH:MM:SS !!
-// toto je submenu čo je hotove, lubovolne menu s lubovolnou štrukturou,
+// riadit spustenie START - tlacidlo !!!!
+// VYPIS vo formate HH:MM:SS -vypis 1 pumpy !!
 // dat pumpy do cyklu, ze vsetky naraz spustí - to iste nastavenie pre vsetky - cize: Nastavit pre vsetky? - Ano/Nie   ( DOROBIT MENU)
 // opakovanie ceprania pre 1 cerpadlo - nadavkuj objem- pockaj - po zadanom case znova spusti ten isty cyklus (opakuj) - kazdy den / hodinu / kazdych 10min
-// pri stlaceni cisla cerpania preprusit MOD1 a vypisat zadane cislo (cerpadla) - vypis toho čo sa prave stlača
-//nastavenie kontrastu v settings casti menu
+
+//zmenit velkost casu - abz sa dalo cerpat viac ako 18h??
 
 // RGB svetlá stavu čerpania
+
+//PRECO PRI VYPISE CASU V 3.UROVNI NEVYPISE SPRAVNE SEKUNDY, ked vo funkcii timetosec vyrata spravne (overene) ????????  
 
 /*Settings: 
  * -kontrast
