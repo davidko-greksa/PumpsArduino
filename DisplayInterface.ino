@@ -5,6 +5,15 @@
 // 7 bit adddress is used
 BV4612 ui(0x35);
 
+#include <PololuLedStrip.h>
+
+// Create an ledStrip object and specify the pin it will use.
+PololuLedStrip<12> ledStrip;
+
+// Create a buffer for holding the colors (3 bytes per color).
+#define LED_COUNT 64
+rgb_color colors[LED_COUNT];
+
 //Konstanty
 #define     PREBLIK             6       //Makro pre nastavenie casu prebliku v sekundach
 #define     MAX_PUMPS           64      //Pocet pump - maximalny az 64!!
@@ -155,10 +164,11 @@ void vypisPumpu(uint8_t p) {
 
     //po zapnuti (v nenulovom case) a tiez naplni pomocou sprintf  pumpTimesBuf vo formate minuty:sekundy 
     if (pumpTimesStart[p] != 0) {
-        char timePrintBuf[6];
+        char timePrintBuf[9];
+        char hours   = ((millis() / 1000) - pumpTimesStart[p]) / 3600;
         char minutes = ((millis() / 1000) - pumpTimesStart[p]) / 60;
         char seconds = ((millis() / 1000) - pumpTimesStart[p]) % 60;
-        sprintf ( timePrintBuf, "%d:%d", minutes , seconds);
+        sprintf ( timePrintBuf, "%d:%d:%d", hours, minutes , seconds);
         ui.setCursor(col,row+1);
         ui.print(timePrintBuf); 
     } else /*Vypis pri vypnutej pumpe*/ {
@@ -182,9 +192,15 @@ unsigned long timeToSec(unsigned long t) {
 }
 
 //cislo v sekundach prevedie na format HH:MM:SS
-uint16_t timeToHHMMSS(long s){
-    long hhmmss = 0;
-    
+void timeToHHMMSS(char* bufHHMMSS, unsigned long s){    // Pošle sa iba adresa poľa (stringu) kde sa robí prepis hodnôt
+    char HH = 0;
+    char MM = 0;
+    char SS = 0;
+    HH = s / 3600;
+    s = s % 3600;
+    MM = s / 60;
+    SS = s % 60;
+    sprintf(bufHHMMSS, "%d:%d:%d", HH, MM, SS);  //ziaden "return" lebo sa posiela adresa, nepotrebujem vystup lebo prepis sa udial v pamäti  
 }
 
 //Výpis 1 vybranej pumpy s detailami
@@ -208,10 +224,14 @@ void pumpDetail(uint8_t p) {
     ui.setCursor(0,5);
     ui.print("Time: ");
     if(pumpTimesLength[p] != 0){
-        ui.print(pumpTimesLength[p] - ((millis() / 1000) - pumpTimesStart[p]));
+        char bufHHMMSS[9];    // najskôr vytvorím pamäťové miesto pre pole, potom vo funkcii (kam pošlem adresu pola) naplnim hodnotami.
+        timeToHHMMSS(bufHHMMSS, pumpTimesLength[p] - ((millis() / 1000) - pumpTimesStart[p])); // nedavam do funkcie lebo je to void funkcia bez navratovej hodnoty
+        ui.print(bufHHMMSS);
     } else {
         ui.print(0);  
     }
+    ui.setCursor(0,7);
+    ui.print("tlc.CHP => nastav");
 }
 
 // Keyboard Layout:
@@ -396,6 +416,12 @@ void setup() {
     p_choice = 4; // 4, aby po 1. stlaceni bolo 1 ciže Mode (rotovanie 0-4 => % 5 a +1)
 
     zobrazenie();
+
+    for(uint8_t i = 0; i < pocetPump; i++){   //ak by ostalo nieco svietit z predoslych cerpani vyplne LEDky
+        colors [i]= rgb_color (0,0,0);
+        ledStrip.write(colors, LED_COUNT);
+        }
+        colors [0]= rgb_color (0,0,0);
 };
 
 void loop() {   
@@ -584,7 +610,7 @@ void loop() {
             ui.setCursor(0,6);
             ui.print("input:");          
             ui.setCursor(0,7);
-            if(kbuf == -1){
+            if(kbuf == UNUSED_CELL){
                 
                 if((tempMode || tempDir || tempVol || tempFlow || tempTimeLength) != 0){
                     ui.print("acepted");     
@@ -651,6 +677,17 @@ void loop() {
     
     //Tu je aktualizacia časov - kolko sa už prečerpalo - dekrementacia napr. každú sekundu.
     updateValues();
+
+  //RGB časť------------------------------------------------------------------------------
+  if (pumpTimesStart[m] != 0) {   //ak sa cerpa svieti zelena "G" danej pumpy
+          colors [m-1]= rgb_color (0,255,0);
+          //ledStrip.write(colors, LED_COUNT);
+    } else if(pumpTimesStart[m] == 0){  /*cervena "R" farba pri "OFF" vypnutej pumpe*/ 
+          colors [m-1]= rgb_color (255,0,0);
+          //ledStrip.write(colors, LED_COUNT);
+    }
+    ledStrip.write(colors, LED_COUNT);
+    //delay(10);
 }
 
 //TO DO:
