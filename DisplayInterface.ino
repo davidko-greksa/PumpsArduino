@@ -25,6 +25,7 @@ rgb_color colors[LED_COUNT];
 #define     KEY_OK              126     //Kod pre tlacidlo - zamietnutie
 #define     KEY_CHPARAM         123     //Tlacidlo, CH - change PARAM-parameters, pre MODE (mod 1 zo 4), a DIR - direction, rotujuce 4 hodnoty dokola, volba v settings
 #define     KEY_SETTINGS        122     //Tlacidlo pre nastavenie hl. hodnot, -poč. cerpadiel, kontrast, vyber cerpadla
+#define     KEY_START           121     // Tlacidlo START, ktore zapne cerpanie svetkych pump
 
 
 
@@ -48,6 +49,7 @@ uint16_t tempVol;
 uint8_t tempFlow;
 uint16_t tempTimeStart; 
 unsigned long tempTimeLength;
+uint8_t tempPumpType;
 uint8_t tempPocetPump;
 uint8_t tempKontrast;
 uint8_t tempChoice;         //premenna na definovanie co sa bude zadavat, ci sme v nastaveni kontrastu alebo poctu pump
@@ -89,6 +91,9 @@ uint16_t pumpVolumes[MAX_PUMPS];
 
 //pole na prietoky-flow púmp
 uint8_t pumpFlow[MAX_PUMPS];
+
+//pole na vyber typu pumpy
+uint8_t pumpType[MAX_PUMPS];
 
 //Buffer, do ktoreho natlacime nazov (cislo) pumpy a akutalny mod
 char pumpPrintBuf[6];
@@ -216,6 +221,7 @@ void pumpDetail(uint8_t p) {
     ui.print("Dir: ");
     ui.print(pumpDir[p]);
     ui.setCursor(0,3);
+    delay(10);
     ui.print("Volume: ");
     ui.print(pumpVolumes[p]);
     ui.setCursor(0,4);
@@ -225,13 +231,32 @@ void pumpDetail(uint8_t p) {
     ui.print("Time: ");
     if(pumpTimesLength[p] != 0){
         char bufHHMMSS[9];    // najskôr vytvorím pamäťové miesto pre pole, potom vo funkcii (kam pošlem adresu pola) naplnim hodnotami.
-        timeToHHMMSS(bufHHMMSS, pumpTimesLength[p] - ((millis() / 1000) - pumpTimesStart[p])); // nedavam do funkcie lebo je to void funkcia bez navratovej hodnoty
+        if (pumpTimesStart[p] != 0) {
+            timeToHHMMSS(bufHHMMSS, pumpTimesLength[p] - ((millis() / 1000) - pumpTimesStart[p])); // nedavam do funkcie lebo je to void funkcia bez navratovej hodnoty
+        } else {
+          timeToHHMMSS(bufHHMMSS, pumpTimesLength[p]);
+        }
         ui.print(bufHHMMSS);
     } else {
         ui.print(0);  
     }
+    ui.setCursor(0,6);
+    ui.print("Type: ");
+    //ui.print(pumpType[p]);
+    if(pumpType[p] == 0){
+      ui.print("Peristaltic");
+    }
+    else if(pumpType[p] == 1){
+      ui.print("DC");
+    }
+    else if(pumpType[p] == 2){
+      ui.print("Krok. mot.");
+    }
+    else{
+      ui.print("zly vstup");
+    }
     ui.setCursor(0,7);
-    ui.print("tlc.CHP => nastav");
+    ui.print("  tlc.CHP => nastav");
 }
 
 // Keyboard Layout:
@@ -260,7 +285,7 @@ char handleKey(char c){
         case 9:  return 1; break;
         case 10: return 2; break;
         case 11: return 3; break;
-        case 12: break;
+        case 12: return KEY_START; break;
         case 13: return KEY_NOK; break;
         case 14: return 0; break;
         case 15: return KEY_OK; break;
@@ -372,12 +397,16 @@ void zobrazenie() {
 //porovnavame ci sme docerpali, ak hej vyplne sa pumpa a pumpTimeLength sa nastavi na 0 
 void updateValues(){
     uint8_t i;  //cislo pumpy
-    uint32_t timeDif;   // difference - rozdiel
+    unsigned long timeDif;   // difference - rozdiel
     for(i = 0; i < pocetPump; i++){
-        timeDif =  (millis() / 1000 ) - pumpTimesStart[i];
-        if(timeDif >= pumpTimesLength[i]){
-            pumpTimesLength[i] = 0;
-            pumpTimesStart[i] = 0; 
+      
+        if (pumpTimesStart[i] == 0) {}
+        else {
+            timeDif =  (millis() / 1000 ) - pumpTimesStart[i];
+            if(timeDif >= pumpTimesLength[i]){
+                pumpTimesLength[i] = 0;
+                pumpTimesStart[i] = 0; 
+            }
         }
     }
 }
@@ -385,7 +414,7 @@ void updateValues(){
 void setup() {
 
     //Displej
-    kontrast = 10;
+    kontrast = 15;
     ui.contrast(kontrast);
     ui.clear();
     ui.clrBuf();
@@ -406,7 +435,8 @@ void setup() {
         pumpVolumes[i] = 0;
         pumpFlow[i] = 0;
         pumpTimesStart[i] = 0;   
-        pumpTimesLength[i] = 0;   //zadany cas z klavesnice displeja  
+        pumpTimesLength[i] = 0;   //zadany cas z klavesnice displeja
+        pumpType[i] = 0;  
     }
 
     //Inicializacia premennych
@@ -450,12 +480,13 @@ void loop() {
                 p_choice = 0;
                 chparMask = 0;
                 //pripradovanie hlavnych dlhodobych hodnot do kratkodobych -docastnych pre okamzite zobrazenie-vypis
-                tempMode = pumpModes[m-1];    // prva pumpa je indexovana v poli ako 0
+                tempMode = pumpModes[m-1];    // prva pumpa je indexovana v poli ako 0 (lebo mapujeme z cislovania pri vypise do cislovania v poli)
                 tempDir = pumpDir[m-1];
                 tempVol = pumpVolumes[m-1];
                 tempFlow = pumpFlow[m-1];
                 tempTimeStart = pumpTimesStart[m-1];
                 tempTimeLength = pumpTimesLength[m-1];
+                tempPumpType = pumpType[m-1];
                 kbuf = UNUSED_CELL;
             }
             if(k == KEY_NOK){
@@ -467,6 +498,14 @@ void loop() {
                 tempChoice = 0;
                 tempKontrast = kontrast;
                 tempPocetPump = pocetPump;
+            }
+            if(k == KEY_START){
+                for(uint8_t i = 0 ; i < pocetPump; i++) { 
+                      if (pumpTimesStart[i] == 0 && pumpTimesLength[i] != 0) {  // 1.podmienka vravi, ze tie ktore nie su spustene && 2.podm. tie ktore mame nastavene - ta ktora nie je nastavena nemoye mat start yiaden efekt 
+                           pumpTimesStart[i] = millis() / 1000;
+                      }
+                }
+                kbuf = UNUSED_CELL;
             }
             
         }
@@ -498,9 +537,8 @@ void loop() {
             ui.clrBuf();
             
             if(k == KEY_CHPARAM) {
-                p_choice = (p_choice % 5) + 1;  //%5 -> ostaneme v hraniciach 0 az 4 pre zadavanie, posledna +1 -> ideme v modoch uz 1 az 5
+                p_choice = (p_choice % 6) + 1;  //%6 -> ostaneme v hraniciach 0 az 4 pre zadavanie, posledna +1 -> ideme v modoch uz 1 az 6
                 m = m + (100 * p_choice);
-                //  continue;    // continue ???
             }
             if(k == KEY_NOK) {
                 m = 0;
@@ -508,9 +546,6 @@ void loop() {
                 zobrazenie();
             }
             if(k == KEY_OK) {
-                /*pumpModes[m-1] = tempMode;    // m-1 pumpa (real čislovanie od 1, v programe od 0) sa prepíse hlavný mod podla dočasneho
-                    pumpTimesStart[m-1] = tempTimeStart;
-                    pumpTimesLength[m-1] = tempTimeLength;*/ //riesime v 3.urovni
                 m = 0;
                 ui.clear();
                 zobrazenie();
@@ -530,14 +565,14 @@ void loop() {
         //(neuvazuje sa obahovanie cisla pumpy napr 417 kde 17 je cislo pumpy) /tchoice - temporary choice
         char tpump = (m % 100) -1 ;   // zistenie cisla pumpy ktoru upravujeme, ale cislovanie z pohladu pola tj. 0-17 (ta -1)
         //osetrenie spravnosti vstupu. Ak nie je spravny, ideme spat na home.
-        if((tchoice < 1) || (tchoice > 5) || (tpump < 0) || (tpump >= pocetPump)) {
+        if((tchoice < 1) || (tchoice > 6) || (tpump < 0) || (tpump >= pocetPump)) {
             m = 0;
         } else {
             if (ui.keysBuf()) {  
                 char k = handleKey(ui.key());
                 ui.clrBuf();
                 if(k == KEY_CHPARAM) {
-                    m = (m % 500) + 100;
+                    m = (m % 600) + 100;
                     kbuf = UNUSED_CELL;  // pri zadani cisla a naslednom stlaceni CHPARAM sa buffer nuluje a neuklada zadane cislo
                     return;
                 }
@@ -565,10 +600,10 @@ void loop() {
                             pumpVolumes[tpump] = tempVol;
                         if((chparMask & 16) == 16)
                             pumpFlow[tpump] = tempFlow;
-                        if((chparMask & 32) == 32){
+                        if((chparMask & 32) == 32)
                             pumpTimesLength[tpump] = tempTimeLength;
-                            pumpTimesStart[tpump] = millis() / 1000; //Aktualizacia pumpTimesStart[] pre vybranu pumpu, ale od zadania casu cerpania 
-                        }
+                        if((chparMask & 64) == 64)
+                            pumpType[tpump] = tempPumpType;
                         chparMask = 0;
                         return; // "loop" zacne odznova, a kedze "m" je globalna tak sa dostaneme do Vypisu 1 pumpy (m = 1)
                     } else {  //if(kbuf != UNUSED_CELL) - sekcia niektoreho zadavania bez prechodu do Vypisu 1 pumpy
@@ -581,7 +616,7 @@ void loop() {
                             case 3: tempVol = kbuf; chparMask |= 8; break;   
                             case 4: tempFlow = kbuf; chparMask |= 16; break;
                             case 5: tempTimeLength = timeToSec(kbuf); chparMask |= 32; break;
-                            //TO DO - nechat v tempe vo formate HH:MM:SS koli vypisu???
+                            case 6: tempPumpType = kbuf; chparMask |= 64; break;
                         }
                         kbuf = UNUSED_CELL;
                         return;
@@ -612,7 +647,7 @@ void loop() {
             ui.setCursor(0,7);
             if(kbuf == UNUSED_CELL){
                 
-                if((tempMode || tempDir || tempVol || tempFlow || tempTimeLength) != 0){
+                if((tempMode || tempDir || tempVol || tempFlow || tempTimeLength || tempPumpType) != 0){
                     ui.print("acepted");     
                 }else{
                     ui.print("invalid"); 
@@ -658,13 +693,26 @@ void loop() {
                     ui.print("Flow [ml / min]");
                     ui.setCursor(80,6);
                     ui.print(tempFlow);
-                    break;      // TO DO - dopis maximalny
+                    break;  
                 case 5:
                     ui.setCursor(0,0);
                     ui.print("Time [ HH:MM:SS ]");
                     ui.setCursor(80,6);
                     ui.print(tempTimeLength);
-                    break;       
+                    break;
+                case 6:
+                    ui.setCursor(0,0);
+                    ui.print("Type");
+                    ui.setCursor(0,1);
+                    ui.print("0 = Peristaltic");
+                    delay(10);
+                    ui.setCursor(0,2);
+                    ui.print("1 = DC");
+                    ui.setCursor(0,3);
+                    ui.print("2 = Krok. mot.");
+                    ui.setCursor(80,6);
+                    ui.print(tempPumpType);
+                    break;
             }
 
         }
@@ -679,41 +727,17 @@ void loop() {
     updateValues();
 
   //RGB časť------------------------------------------------------------------------------
-  if (pumpTimesStart[m] != 0) {   //ak sa cerpa svieti zelena "G" danej pumpy
-          colors [m-1]= rgb_color (0,255,0);
+  for(uint8_t i = 0 ; i < pocetPump; i++) {   //ak sa cerpa svieti zelena "G" danej pumpy
+          if (pumpTimesStart[i] != 0){
+          colors [i]= rgb_color (0,255,0);
           //ledStrip.write(colors, LED_COUNT);
-    } else if(pumpTimesStart[m] == 0){  /*cervena "R" farba pri "OFF" vypnutej pumpe*/ 
-          colors [m-1]= rgb_color (255,0,0);
+          }
+          else if(pumpTimesStart[i] == 0){  /*cervena "R" farba pri "OFF" vypnutej pumpe*/ 
+          colors [i]= rgb_color (255,0,0);
           //ledStrip.write(colors, LED_COUNT);
-    }
+          }
+   }
     ledStrip.write(colors, LED_COUNT);
-    //delay(10);
+    delay(10);
 }
 
-//TO DO:
-//PORIESIT NEVALIDNE VSTUPY v tempMode zadavani !!!!
-//nechat v tempe vo formate HH:MM:SS , 
-//Odladit DELAY funkcie + nahradit vo funkcii zobrazenie()
-//KONTROLA vsetkych OK-NOK ci pracuju spravne, ukladaju co treba, NOK neuklada, ci to funguje spravne, hranicne priprady
-//Vypis z modu 3
-//pories preblik pri zadavani Direction
-
-
-//            Konzultácia - pridaj
-// riadit spustenie START - tlacidlo !!!!
-// VYPIS vo formate HH:MM:SS -vypis 1 pumpy !!
-// dat pumpy do cyklu, ze vsetky naraz spustí - to iste nastavenie pre vsetky - cize: Nastavit pre vsetky? - Ano/Nie   ( DOROBIT MENU)
-// opakovanie ceprania pre 1 cerpadlo - nadavkuj objem- pockaj - po zadanom case znova spusti ten isty cyklus (opakuj) - kazdy den / hodinu / kazdych 10min
-
-//zmenit velkost casu - abz sa dalo cerpat viac ako 18h??
-
-// RGB svetlá stavu čerpania
-
-//PRECO PRI VYPISE CASU V 3.UROVNI NEVYPISE SPRAVNE SEKUNDY, ked vo funkcii timetosec vyrata spravne (overene) ????????  
-
-/*Settings: 
- * -kontrast
- * -vyber 1 z 3 cerpadiel
- * -zadanie poctu cerpadiel
- EEPROM 
- */
