@@ -15,7 +15,7 @@ PololuLedStrip<12> ledStrip;
 rgb_color colors[LED_COUNT];
 
 //Konstanty
-#define     PREBLIK             6       //Makro pre nastavenie casu prebliku v sekundach
+#define     PREBLIK             5       //Makro pre nastavenie casu prebliku v sekundach
 #define     MAX_PUMPS           64      //Pocet pump - maximalny az 64!!
 #define     PUMPS_PER_DISPLAY   8       //Hovori o tom kolko je mozne vypisat pump na obrazovku pre 1 vypis
 #define     UNUSED_CELL         -1      // -1 je lebo to nie je validna hodnta, nikdz nic nebude mat hodnotu -1 s ktorou by sme pracovali (s 0 praciujeme)
@@ -216,10 +216,44 @@ void pumpDetail(uint8_t p) {
     ui.print(p+1);
     ui.setCursor(0,1);
     ui.print("Mod: ");
-    ui.print(pumpModes[p]);
+    //ui.print(pumpModes[p]);
+    if(pumpModes[p] == 0){
+      ui.print("CD");
+    }
+    else if(pumpModes[p] == 1){
+      ui.print("VD");
+    }
+    else if(pumpModes[p] == 2){
+      ui.print("D");
+    }
+    else if(pumpModes[p] == 3){
+      ui.print("CF");
+    }
+    else{
+      ui.print("zly vstup");
+    }
     ui.setCursor(0,2);
     ui.print("Dir: ");
-    ui.print(pumpDir[p]);
+    //ui.print(pumpDir[p]);
+    if(pumpDir[p] == 0){
+      ui.dataLine(Lvyprazdni, 2, 30, 4);
+      ui.print(" Lvyprazdni");
+    }
+    else if(pumpDir[p] == 1){
+      ui.dataLine(Lnapln, 2, 30, 4);
+      ui.print(" Lnapln");
+    }
+    else if(pumpDir[p] == 2){
+      ui.dataLine(Rvyprazdni, 2, 30, 4);
+      ui.print(" Rvyprazdni");
+    }
+    else if(pumpDir[p] == 3){
+      ui.dataLine(Rnapln, 2, 30, 4);
+      ui.print(" Rnapln");
+    }
+    else{
+      ui.print("zly vstup");
+    }
     ui.setCursor(0,3);
     delay(10);
     ui.print("Volume: ");
@@ -228,6 +262,7 @@ void pumpDetail(uint8_t p) {
     ui.print("Flow: ");
     ui.print(pumpFlow[p]);
     ui.setCursor(0,5);
+    delay(10);
     ui.print("Time: ");
     if(pumpTimesLength[p] != 0){
         char bufHHMMSS[9];    // najskôr vytvorím pamäťové miesto pre pole, potom vo funkcii (kam pošlem adresu pola) naplnim hodnotami.
@@ -419,6 +454,13 @@ void setup() {
     ui.clear();
     ui.clrBuf();
 
+    ui.font(3);
+    ui.setCursor(50,3);
+    ui.print("FEI");
+    delay(2000);
+    ui.clear();
+    ui.font(1);
+
     //konstanty
     Lnapln[0]=0x98; Lnapln[1]=0xa4; Lnapln[2]=0xc2; Lnapln[3]=0xf1;
     Rnapln[0]=0x8f; Rnapln[1]=0x43; Rnapln[2]=0x25; Rnapln[3]=0x19;
@@ -452,7 +494,10 @@ void setup() {
         ledStrip.write(colors, LED_COUNT);
         }
         colors [0]= rgb_color (0,0,0);
-};
+
+
+    
+}
 
 void loop() {   
 
