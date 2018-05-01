@@ -296,15 +296,15 @@ void pumpDetail(uint8_t p) {
 
 // Keyboard Layout:
 //
-// |---|---|---|---|
-// | 7 | 8 | 9 |SET|
-// |---|---|---|---|
-// | 4 | 5 | 6 |CHP|
-// |---|---|---|---|
-// | 1 | 2 | 3 |   |
-// |---|---|---|---|
-// | F | 0 | T |   |
-// |---|---|---|---|
+// |---|---|---|-----|
+// | 7 | 8 | 9 |SETT |
+// |---|---|---|-----|
+// | 4 | 5 | 6 |CHPAR|
+// |---|---|---|-----|
+// | 1 | 2 | 3 |START|
+// |---|---|---|-----|
+// | F | 0 | T |     |
+// |---|---|---|-----|
 
 //Funkcia na prepis zadaneho cisla z klavesnice na pouzivane v kode
 char handleKey(char c){
@@ -377,26 +377,31 @@ void settings(){
     ui.print("Kontrast: ");
     if(tempChoice != 0 || (kbuf == UNUSED_CELL && tempChoice == 0)){
         ui.print(tempKontrast);
-    } else {
-        ui.print(kbuf);  
-    }
+    } //else {
+        //ui.print(kbuf);  
+    //}
     ui.setCursor(0,2);
     if (tempChoice == 1) ui.print("*");
     ui.print("Pocet pump:");
     if(tempChoice != 1 || (kbuf == UNUSED_CELL && tempChoice == 1)){
         ui.print(tempPocetPump);
     } else {
-        ui.print(kbuf);
+        //ui.print(kbuf);
     }
     delay(10);
     ui.setCursor(0,3);
     ui.print("Zmena poc.pump");
     ui.setCursor(0,4);
     ui.print(" => reset");
-    ui.setCursor(0,5);
-    ui.print(tempChoice);
+    /*ui.setCursor(0,5);
+    ui.print(tempChoice);*/
     ui.setCursor(0,6);
-    ui.print(kbuf);
+    ui.print("input: ");
+    if(kbuf == UNUSED_CELL){
+        //ui.print(kbuf);
+    }else{
+        ui.print(kbuf);
+    }
     delay(300);
 }
 
@@ -683,8 +688,8 @@ void loop() {
         if (currentTime >= (savedTime + 800)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
             savedTime = currentTime;
             ui.clear();
-            ui.setCursor(80,7);
-            ui.print(m);
+            //ui.setCursor(80,7);
+            //ui.print(m);
             //ui.setCursor(60,5);
             //ui.print(chparMask);
             ui.setCursor(0,6);
