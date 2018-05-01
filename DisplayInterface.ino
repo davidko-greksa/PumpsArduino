@@ -417,19 +417,19 @@ void zobrazenie() {
         if(i != 2 && i != 5){
             ui.dataLine(ciara, i, 42, 1); //smernik, riadok, stlpec, kolko bytov
             ui.dataLine(ciara, i, 85, 1);
-            delay(50);                                                                        //  DELAY!!!
+            delay(50);                                                                       
         }
     }
      
     currentTime = millis();
-    if (currentTime >= (savedTime + 100)) {     //porovnavanie casu v sekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
+    if (currentTime >= (savedTime + 100)) {     //porovnavanie casu v milisekundach, musi byt >= aby pri zahltenom procesore reagoval na zmenu, nemoze byt ==
         savedTime = currentTime;
         char z = -1 * PUMPS_PER_DISPLAY * m;    // priradenie indexu prvej pumpy pre vypis v danom mode "m" (napr. mod -1 vrati 9, mod -2 vrati 18 atd
         //Vypocet zobrazenia spravnej pumpy,  for( odkial, od ktorej pumpy vypisujem ; pokial vypisujem, po dalsich 9 pump; krok)
         for (char i = z ; i < (pocetPump - z < PUMPS_PER_DISPLAY ? pocetPump : z + PUMPS_PER_DISPLAY); i++)      //ak nie su {} tak berie iba nasledujuci prikaz
             vypisPumpu(i);
-        //Ak je pocet pump nasobku 9, vypisu sa presne od najnizsieho indexu "z" pre dane zobrazenie az po najvyssi kt. sa vyrata "z + PUMPS_PER_DISPLAY" 
-        //Inak vypisuje postupne po 9 cerpadiel, ale na posledny vypis sa vypisu len ostavajuce pumpy po deleni 9, resp. "pocetPump - z"
+        //Ak je pocet pump nasobku 8, vypisu sa presne od najnizsieho indexu "z" pre dane zobrazenie az po najvyssi kt. sa vyrata "z + PUMPS_PER_DISPLAY" 
+        //Inak vypisuje postupne po 8 cerpadiel, ale na posledny vypis sa vypisu len ostavajuce pumpy po deleni 9, resp. "pocetPump - z"
     }
 }
 
@@ -493,22 +493,13 @@ void setup() {
     p_choice = 4; // 4, aby po 1. stlaceni bolo 1 ciže Mode (rotovanie 0-4 => % 5 a +1)
 
     zobrazenie();
-
-    for(uint8_t i = 0; i < pocetPump; i++){   //ak by ostalo nieco svietit z predoslych cerpani vyplne LEDky
-        colors [i]= rgb_color (0,0,0);
-        ledStrip.write(colors, LED_COUNT);
-        }
-        colors [0]= rgb_color (0,0,0);
-
-
-    
 }
 
 void loop() {   
 
     currentTime = millis();   //aktualny cas
     
-    //1. Uroven m (m = 0 / -1) - ZOBRAZENIE 9+9 čerp. ---------
+    //1. Uroven m (m = 0 / -1 az -31) - ZOBRAZENIE 8+8+... čerp. ----------------------------------------------------------------------------------------------------------
     if (m <= 0 && m > -32) {      //vyratava pocet zobrazovacich obrazoviek, pocet moze byt od 0 po 31
 
         //handler zmeny modu
@@ -575,7 +566,7 @@ void loop() {
         }
     }
   
-    //2.Uroven m - MOD = 1, VYPIS 1 CERPADLA  ------------
+    //2.Uroven m - MOD = 1, VYPIS 1 CERPADLA  -------------------------------------------------------------------------------------------------
     if (m >= 1 && m <= pocetPump) {
         currentTime = millis();
         char k;
@@ -609,11 +600,11 @@ void loop() {
         }
     }
 
-    // 3.Uroven m - Výber co sa bude ZADAVAT / nastavovat : Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5
+    // 3.Uroven m - Výber co sa bude ZADAVAT / nastavovat : Mod=1 / Direction=2 / Volume=3 / Flow=4 / Time=5 ------------------------------------------------------
     if(m > pocetPump) {
         char tchoice = m / 100;   // z čísla pumpy vydelením 100 ziskame CELOČÍSELNE v akom p_choice sa nachadzame ci Mode/Dir/Vol...
         //(neuvazuje sa obahovanie cisla pumpy napr 417 kde 17 je cislo pumpy) /tchoice - temporary choice
-        char tpump = (m % 100) -1 ;   // zistenie cisla pumpy ktoru upravujeme, ale cislovanie z pohladu pola tj. 0-17 (ta -1)
+        char tpump = (m % 100) -1 ;   // zistenie cisla pumpy ktoru upravujeme, ale cislovanie z pohladu pola tj. 0-64 (ta -1)
         //osetrenie spravnosti vstupu. Ak nie je spravny, ideme spat na home.
         if((tchoice < 1) || (tchoice > 6) || (tpump < 0) || (tpump >= pocetPump)) {
             m = 0;
@@ -637,11 +628,11 @@ void loop() {
                     }
                 }
                 if(k == KEY_OK) {
-                    if(kbuf == UNUSED_CELL) {    /* ak sme nezadali ziadne cislo ideme späť, určuje ktorý OK je použitý - teraz
-                                                    na vratenie sa do Mode / Dir / Vol.. (nevraciam sa na Vypis 1 pumpy)*/
+                    if(kbuf == UNUSED_CELL) {    //ak sme nezadali ziadne cislo ideme späť, určuje ktorý OK je použitý - teraz
+                                                 //na vratenie sa do Mode / Dir / Vol.. (nevraciam sa na Vypis 1 pumpy)
                         m = m % 100;  // Prechod do Urovne 2
                         //Ulozenie vsetkeho pomocou chparMask
-                        // (chparMask & cislo) bitovo sa iba porovnava, 
+                        // (chparMask & cislo) bitovo sa iba porovnava 
                         if((chparMask & 2) == 2)
                             pumpModes[tpump] = tempMode;
                         if((chparMask & 4) == 4)
@@ -769,7 +760,7 @@ void loop() {
           
     }
     // SETTINGS 
-    if(m == -32){        //Zadavanie hlavnych parametrov - do setting sa da dostat len pi preblikavani vsetkych cerpadiel
+    if(m == -32){        //Zadavanie hlavnych parametrov - do setting sa da dostat len v Urovni 1 - pri preblikavani vsetkych cerpadiel
          settings();       
     }
     
@@ -780,14 +771,12 @@ void loop() {
   for(uint8_t i = 0 ; i < pocetPump; i++) {   //ak sa cerpa svieti zelena "G" danej pumpy
           if (pumpTimesStart[i] != 0){
           colors [i]= rgb_color (0,255,0);
-          //ledStrip.write(colors, LED_COUNT);
           }
-          else if(pumpTimesStart[i] == 0){  /*cervena "R" farba pri "OFF" vypnutej pumpe*/ 
+          else if(pumpTimesStart[i] == 0){  //cervena "R" farba pri "OFF" vypnutej pumpe 
           colors [i]= rgb_color (255,0,0);
-          //ledStrip.write(colors, LED_COUNT);
           }
    }
     ledStrip.write(colors, LED_COUNT);
-    delay(10);
+    //delay(10);
 }
 
