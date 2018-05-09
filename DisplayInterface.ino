@@ -230,29 +230,29 @@ void pumpDetail(uint8_t p) {
       ui.print("CF");
     }
     else{
-      ui.print("zly vstup");
+      ui.print("wrong input");
     }
     ui.setCursor(0,2);
     ui.print("Dir: ");
     //ui.print(pumpDir[p]);
     if(pumpDir[p] == 0){
       ui.dataLine(Lvyprazdni, 2, 30, 4);
-      ui.print(" Lvyprazdni");
+      ui.print(" L empty");
     }
     else if(pumpDir[p] == 1){
       ui.dataLine(Lnapln, 2, 30, 4);
-      ui.print(" Lnapln");
+      ui.print(" L fill");
     }
     else if(pumpDir[p] == 2){
       ui.dataLine(Rvyprazdni, 2, 30, 4);
-      ui.print(" Rvyprazdni");
+      ui.print(" R empty");
     }
     else if(pumpDir[p] == 3){
       ui.dataLine(Rnapln, 2, 30, 4);
-      ui.print(" Rnapln");
+      ui.print(" R fill");
     }
     else{
-      ui.print("zly vstup");
+      ui.print("wrong input");
     }
     ui.setCursor(0,3);
     delay(10);
@@ -291,7 +291,7 @@ void pumpDetail(uint8_t p) {
       ui.print("zly vstup");
     }
     ui.setCursor(0,7);
-    ui.print("  tlc.CHP => nastav");
+    ui.print(" button PAR => sett.");
 }
 
 // Keyboard Layout:
@@ -374,7 +374,7 @@ void settings(){
     ui.print("Settings");
     ui.setCursor(0,1);
     if (tempChoice == 0) ui.print("*");
-    ui.print("Kontrast: ");
+    ui.print("Contrast: ");
     if(tempChoice != 0 || (kbuf == UNUSED_CELL && tempChoice == 0)){
         ui.print(tempKontrast);
     } //else {
@@ -382,7 +382,7 @@ void settings(){
     //}
     ui.setCursor(0,2);
     if (tempChoice == 1) ui.print("*");
-    ui.print("Pocet pump:");
+    ui.print("Pump number: ");
     if(tempChoice != 1 || (kbuf == UNUSED_CELL && tempChoice == 1)){
         ui.print(tempPocetPump);
     } else {
@@ -390,7 +390,7 @@ void settings(){
     }
     delay(10);
     ui.setCursor(0,3);
-    ui.print("Zmena poc.pump");
+    ui.print("Change pump numb.");
     ui.setCursor(0,4);
     ui.print(" => reset");
     /*ui.setCursor(0,5);
@@ -439,7 +439,6 @@ void updateValues(){
     uint8_t i;  //cislo pumpy
     unsigned long timeDif;   // difference - rozdiel
     for(i = 0; i < pocetPump; i++){
-      
         if (pumpTimesStart[i] == 0) {}
         else {
             timeDif =  (millis() / 1000 ) - pumpTimesStart[i];
@@ -460,8 +459,12 @@ void setup() {
     ui.clrBuf();
 
     ui.font(3);
+    ui.setCursor(30,1);
+    ui.print("FEI STU");
     ui.setCursor(50,3);
-    ui.print("FEI");
+    ui.print("UEF");
+    ui.setCursor(40,5);
+    ui.print("v 1.0");    
     delay(2000);
     ui.clear();
     ui.font(1);
@@ -499,7 +502,7 @@ void loop() {
 
     currentTime = millis();   //aktualny cas
     
-    //1. Uroven m (m = 0 / -1 az -31) - ZOBRAZENIE 8+8+... čerp. ----------------------------------------------------------------------------------------------------------
+    //1. Uroven m (m = 0 / -1 az -31) - ZOBRAZENIE 8+8+... čerp. -----------------------------------------------------------------------------------
     if (m <= 0 && m > -32) {      //vyratava pocet zobrazovacich obrazoviek, pocet moze byt od 0 po 31
 
         //handler zmeny modu
@@ -651,7 +654,6 @@ void loop() {
                         switch(tchoice) {
                             case 1:
                                 tempMode = kbuf; chparMask |= 2; // priORuj- setbit, konkretny IBA bit nastavime v maske ci nastala zmena, teda ci sa neskor zapise z temp. premennych do hlavnych 
-                                //TO DO - PORIESIT NEVALIDNE VSTUPY !!!!
                                 break; 
                             case 2: tempDir = kbuf; chparMask |= 4; break;
                             case 3: tempVol = kbuf; chparMask |= 8; break;   
@@ -712,14 +714,14 @@ void loop() {
                     ui.setCursor(0,0);
                     ui.print("Direction");
                     ui.setCursor(0,1);
-                    ui.print("0 = Lvyprazdni");
+                    ui.print("0 = L empty");
                     delay(10);
                     ui.setCursor(0,2);
-                    ui.print("1 = Lnapln");
+                    ui.print("1 = L fill");
                     ui.setCursor(0,3);
-                    ui.print("2 = Rvyprazdni");
+                    ui.print("2 = R empty");
                     ui.setCursor(0,4);
-                    ui.print("3 = Rnapln");
+                    ui.print("3 = R fill");
                     ui.setCursor(80,6);
                     ui.print(tempDir);
                     break;
@@ -750,7 +752,7 @@ void loop() {
                     ui.setCursor(0,2);
                     ui.print("1 = DC");
                     ui.setCursor(0,3);
-                    ui.print("2 = Krok. mot.");
+                    ui.print("2 = Step. mot.");
                     ui.setCursor(80,6);
                     ui.print(tempPumpType);
                     break;
@@ -775,8 +777,7 @@ void loop() {
           else if(pumpTimesStart[i] == 0){  //cervena "R" farba pri "OFF" vypnutej pumpe 
           colors [i]= rgb_color (255,0,0);
           }
-   }
-    ledStrip.write(colors, LED_COUNT);
-    //delay(10);
+  }
+  ledStrip.write(colors, LED_COUNT);
 }
 
